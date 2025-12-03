@@ -629,6 +629,11 @@ class QtMeritCalcApp(QMainWindow):
         )
         body.setAlignment(Qt.AlignmentFlag.AlignCenter)
         v.addWidget(body)
+        dev_body = QLabel(
+            "Developer: PINKgeekPDX • Development date: 2025-12-03"
+        )
+        dev_body.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(dev_body)
         img = QLabel()
         img.setFixedSize(300, 300)
         icon = get_app_icon()
@@ -639,6 +644,7 @@ class QtMeritCalcApp(QMainWindow):
         btn_repo = QPushButton("GitHub")
         btn_issues = QPushButton("Issues")
         btn_updates = QPushButton("Check for Updates")
+        btn_updates.setEnabled(False)
         btn_license = QPushButton("Open Source License")
         row.addWidget(btn_repo)
         row.addWidget(btn_issues)

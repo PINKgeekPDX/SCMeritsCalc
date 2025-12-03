@@ -472,7 +472,7 @@ class QtMeritCalcApp(QMainWindow):
             int(self.settings.get("transparency_default", 90) * 100)
         )
         self.sld_transparency.valueChanged.connect(
-            lambda v: self._apply_opacity(int(v))
+            lambda v: self._apply_transparency(int(v))
         )
         layout.addWidget(self.sld_transparency)
         self.spin_rate = QDoubleSpinBox()
@@ -503,6 +503,9 @@ class QtMeritCalcApp(QMainWindow):
         op = max(0.0, min(1.0, value / 100.0))
         self.setWindowOpacity(op)
         self.settings.set("window_opacity", op)
+
+    def _apply_opacity(self, v: int):
+        self._apply_transparency(v)
 
     def _apply_dpi_scale(self, val: int):
         self.settings.set("ui_scale", float(val))
@@ -655,12 +658,10 @@ class QtMeritCalcApp(QMainWindow):
         prog.setRange(0, 100)
         prog.setValue(0)
         v.addWidget(prog)
-        btn_repo.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/"))
-        )
-        btn_issues.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/issues"))
-        )
+        repo_url = "https://github.com/PINKgeekPDX/SCMeritsCalc"
+        issues_url = "https://github.com/PINKgeekPDX/SCMeritsCalc/issues"
+        btn_repo.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(repo_url)))
+        btn_issues.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(issues_url)))
 
         def _fake_update():
             prog.setValue(100)

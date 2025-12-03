@@ -1,4 +1,4 @@
-# SC Merits Calc — Star Citizen Prison Calculator (Qt UI)
+# SC Merits Calc — Star Citizen Prison Calculator
 
 A Windows desktop app built with Python and PyQt6 for calculating Star Citizen prison merits, sentence time, and aUEC conversions.
 
@@ -14,9 +14,7 @@ A Windows desktop app built with Python and PyQt6 for calculating Star Citizen p
 
 ## Installation
 
-Download and run the installer (MeritsCalc-Setup.exe) from the releases page.
-
-## Build from source
+Download and run the installer (MeritsCalc-Setup.exe) from the [Releases](https://github.com/PINKgeekPDX/SCMeritsCalc/releases) page.
 
 1. Ensure Python 3.11+ is installed.
 2. Install dependencies:
@@ -24,6 +22,11 @@ Download and run the installer (MeritsCalc-Setup.exe) from the releases page.
 ```bash
 pip install -r requirements.txt
 ```
+
+Project links:
+
+- Repo: [https://github.com/PINKgeekPDX/SCMeritsCalc](https://github.com/PINKgeekPDX/SCMeritsCalc)
+- Issues: [https://github.com/PINKgeekPDX/SCMeritsCalc/issues](https://github.com/PINKgeekPDX/SCMeritsCalc/issues)
 
 ## Usage
 
@@ -33,11 +36,11 @@ pip install -r requirements.txt
 python -m meritscalc.main
 ```
 
-2. Calculator Tab:
+1. Calculator Tab:
    - Enter Merits to see time reduction and aUEC value.
    - Enter Time (HH:MM:SS) to see required Merits and cost.
    - Enter aUEC to see how many Merits you can buy/sell.
-3. Settings Tab:
+1. Settings Tab:
    - Customize rates if the economy changes.
    - Toggle aspect ratio enforcement.
    - Enable snapping to screen edges or other app windows.
@@ -56,6 +59,10 @@ Installer build (requires Inno Setup):
 ```powershell
 ./scripts/build_installer.ps1
 ```
+
+Releases:
+
+- [https://github.com/PINKgeekPDX/SCMeritsCalc/releases](https://github.com/PINKgeekPDX/SCMeritsCalc/releases)
 
 ## Configuration
 

@@ -10,7 +10,7 @@ if (!(Test-Path ".\.venv\\Scripts\\python.exe")) {
 }
 
 & $Python -m pip install --upgrade pip
-& $Python -m pip install pyinstaller PyQt6 Pillow pyperclip
+& $Python -m pip install pyinstaller PyQt6 Pillow pyperclip customtkinter pywin32
 
 Write-Host "==> Building $BuildName.exe with PyInstaller"
 $Entry = "src\\meritscalc\\main.py"
@@ -24,11 +24,16 @@ $Entry = "src\\meritscalc\\main.py"
   --icon assets\app-logo.ico `
   --add-data "assets\app-logo.png;assets" `
   --add-data "assets\app-logo.ico;assets" `
+  --paths src `
   --hidden-import PyQt6.QtCore `
   --hidden-import PyQt6.QtGui `
   --hidden-import PyQt6.QtWidgets `
   --hidden-import PIL `
   --hidden-import pyperclip `
+  --hidden-import meritscalc.settings `
+  --hidden-import meritscalc.logic `
+  --hidden-import meritscalc.qt_ui `
+  --hidden-import meritscalc.components `
   $Entry
 
 Write-Host "==> Build complete. Output: $DistDir\\$BuildName.exe"

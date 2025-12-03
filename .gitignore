@@ -13,10 +13,14 @@ venv/
 # IDE/editor
 .vscode/
 .idea/
+.serena/
+.specify/
+.claude/
 
 # Build artifacts
 build/
 dist/
+installer/
 *.spec
 
 # Logs

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# PyInstaller caches
+*.toc
+*.pkg
+base_library.zip
+

@@ -1,0 +1,6 @@
+dearpygui>=1.9.0
+pystray>=0.19.0
+Pillow>=9.0.0
+pyperclip>=1.8.0
+customtkinter>=5.0.0
+pywin32>=306; sys_platform == "win32"

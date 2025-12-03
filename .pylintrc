@@ -1,0 +1,20 @@
+[MASTER]
+extension-pkg-allow-list=PyQt6
+
+[FORMAT]
+max-line-length=100
+
+[MESSAGES CONTROL]
+disable=
+    C0114,
+    C0115,
+    C0116,
+    R0902,
+    R0901,
+    R0915,
+    R0914,
+    R0903,
+    C0103,
+    W0612,
+    W0718,
+    W0221

@@ -1,5 +1,7 @@
 # SC Merits Calc — Star Citizen Prison Calculator
 
+![Preview](https://github.com/PINKgeekPDX/SCMeritsCalc/blob/main/preview/image.png)
+
 A Windows desktop app built with Python and PyQt6 for calculating Star Citizen prison merits, sentence time, and aUEC conversions.
 
 ## Features

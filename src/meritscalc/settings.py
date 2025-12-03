@@ -47,11 +47,6 @@ DEFAULT_SETTINGS = {
     "show_snap_preview": True,
     # UI behavior
     "minimize_to_tray": False,
-    "auto_save": True,
-    "animations_enabled": True,
-    "theme_mode": "Dark",
-    "theme_color": "blue",
-    "font_size": 14,
     # Transparency and visual effects
     "transparency_enabled": True,
     "transparency_default": 0.9,
@@ -66,45 +61,23 @@ DEFAULT_SETTINGS = {
     "shortcuts": {
         "save": {"ctrl": True, "shift": False, "alt": False, "key": "S"},
         "quit": {"ctrl": True, "shift": False, "alt": False, "key": "Q"},
-        "copy_report": {
-            "ctrl": True,
-            "shift": False,
-            "alt": False,
-            "key": "C",
-        },
+        "copy_report": {"ctrl": True, "shift": False, "alt": False, "key": "C"},
         "clear": {"ctrl": True, "shift": False, "alt": False, "key": "R"},
-        "minimize": {
-            "ctrl": False,
-            "shift": False,
-            "alt": False,
-            "key": "Escape",
-        },
-        "toggle_transparency": {
-            "ctrl": True,
-            "shift": True,
-            "alt": False,
-            "key": "T",
-        },
-        "toggle_always_on_top": {
-            "ctrl": True,
-            "shift": True,
-            "alt": False,
-            "key": "A",
-        },
+        "minimize": {"ctrl": False, "shift": False, "alt": False, "key": "Escape"},
+        "toggle_transparency": {"ctrl": True, "shift": True, "alt": False, "key": "T"},
+        "toggle_always_on_top": {"ctrl": True, "shift": True, "alt": False, "key": "A"},
     },
     # Last used inputs
     "last_inputs": {
         "time_h": "00",
         "time_m": "00",
         "time_s": "00",
-        "merits": "",
-        "auec": "",
+        "merits": "00",
+        "auec": "00",
     },
     # File paths and preferences
     "default_report_path": "",
-    "auto_copy_report": False,
     "confirm_exit": True,
-    "show_tooltips": True,
     # Performance settings
     "target_fps": 60,
     "vsync_enabled": True,
@@ -152,8 +125,7 @@ class SettingsManager:
                 observer(key, value)
             except (OSError, IOError) as e:
                 print(f"Error in settings observer: {e}")
-        if self._settings.get("auto_save", True):
-            self.save_settings()
+        self.save_settings()
 
     def add_observer(self, observer):
         """Add a settings change observer."""
@@ -178,9 +150,8 @@ class SettingsManager:
                 except (OSError, IOError) as e:
                     print(f"Error in settings observer: {e}")
 
-        # Auto-save if enabled
-        if self._settings.get("auto_save", True):
-            self.save_settings()
+        # Always save
+        self.save_settings()
 
     def reset_to_defaults(self):
         """Reset all settings to defaults."""

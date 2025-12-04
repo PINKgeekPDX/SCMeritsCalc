@@ -25,6 +25,54 @@ class UpdateManager:
         self.latest_release_info = None
         self._cancel_download = False
 
+    def _extract_version_from_tag(self, tag_name: str) -> Optional[str]:
+        """
+        Extract a version number from various tag formats.
+        Handles: "release101" -> "1.0.1", "v1.0.1" -> "1.0.1", "1.0.1" -> "1.0.1"
+        """
+        tag = tag_name.strip().lstrip("v").lower()
+
+        # Handle "release101" format -> "1.0.1"
+        if tag.startswith("release"):
+            # Extract numbers after "release"
+            numbers = tag.replace("release", "").strip()
+            if not numbers:
+                # "release" without numbers -> treat as "1.0.0"
+                return "1.0.0"
+            elif numbers.isdigit():
+                # Convert "101" to "1.0.1" format
+                if len(numbers) == 3:
+                    major = numbers[0]
+                    minor = numbers[1]
+                    patch = numbers[2]
+                    return f"{major}.{minor}.{patch}"
+                elif len(numbers) == 2:
+                    major = numbers[0]
+                    minor = numbers[1]
+                    return f"{major}.{minor}.0"
+                elif len(numbers) == 1:
+                    return f"{numbers}.0.0"
+                elif len(numbers) >= 4:
+                    # For longer numbers like "1010" -> "1.0.10" or "10101" -> "1.01.01"
+                    # Take first digit as major, next 1-2 as minor, rest as patch
+                    major = numbers[0]
+                    if len(numbers) == 4:
+                        minor = numbers[1]
+                        patch = numbers[2:4]
+                    else:
+                        minor = numbers[1:3] if len(numbers) >= 5 else numbers[1]
+                        patch = numbers[3:] if len(numbers) >= 5 else numbers[2:]
+                    return f"{major}.{minor}.{patch}"
+
+        # Try to parse as-is (might already be a valid version)
+        try:
+            version.parse(tag)
+            return tag
+        except Exception:
+            pass
+
+        return None
+
     def check_for_updates(self) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         Check if a new version is available.
@@ -36,33 +84,43 @@ class UpdateManager:
             response.raise_for_status()
 
             release_data = response.json()
-            tag_name = release_data.get("tag_name", "").lstrip("v")
+            tag_name = release_data.get("tag_name", "")
+
+            # Extract version from tag
+            extracted_version = self._extract_version_from_tag(tag_name)
+
+            if not extracted_version:
+                self.logger.warning(
+                    f"Could not extract version from tag '{tag_name}'. "
+                    f"Skipping version comparison."
+                )
+                return False, tag_name, None
 
             self.logger.info(
-                f"Current version: {__version__}, Latest version: {tag_name}"
+                f"Current version: {__version__}, Latest version: {extracted_version} "
+                f"(from tag: {tag_name})"
             )
 
-            # Validate that tag_name is a valid version string
+            # Validate and compare versions
             try:
-                latest_version = version.parse(tag_name)
+                latest_version = version.parse(extracted_version)
                 current_version = version.parse(__version__)
             except Exception as parse_error:
                 self.logger.warning(
-                    f"Invalid version tag '{tag_name}': {parse_error}. "
+                    f"Invalid version '{extracted_version}': {parse_error}. "
                     f"Skipping version comparison."
                 )
-                # Return that we're up to date if we can't parse the version
-                return False, tag_name, None
+                return False, extracted_version, None
 
             if latest_version > current_version:
                 self.latest_release_info = release_data
                 return (
                     True,
-                    tag_name,
+                    extracted_version,
                     release_data.get("body", "No release notes provided."),
                 )
 
-            return False, tag_name, None
+            return False, extracted_version, None
 
         except Exception as e:
             self.logger.error(f"Update check failed: {e}")

@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSlider,
     QSystemTrayIcon,
     QTableWidget,
@@ -470,9 +471,11 @@ class QtMeritCalcApp(QMainWindow):
         v.addWidget(self.tabs)
         calc = QWidget()
         settings_tab = QWidget()
+        help_tab = QWidget()
         about_tab = QWidget()
         self.tabs.addTab(calc, "CALCULATOR")
         self.tabs.addTab(settings_tab, "SETTINGS")
+        self.tabs.addTab(help_tab, "HELP")
         self.tabs.addTab(about_tab, "ABOUT")
         calc_layout = QVBoxLayout(calc)
         calc_layout.setContentsMargins(8, 8, 8, 8)
@@ -483,6 +486,7 @@ class QtMeritCalcApp(QMainWindow):
         self._add_auec(calc_layout)
         self._add_actions(calc_layout)
         self._build_settings_tab(settings_tab)
+        self._build_help_tab(help_tab)
         self._build_about_tab(about_tab)
         self._apply_styles()
 
@@ -1147,6 +1151,224 @@ class QtMeritCalcApp(QMainWindow):
             dlg.exec()
 
         btn_license.clicked.connect(_show_license)
+
+    def _build_help_tab(self, tab: QWidget):
+        v = QVBoxLayout(tab)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+
+        # Create scrollable area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setContentsMargins(12, 12, 12, 12)
+        scroll_layout.setSpacing(15)
+
+        # Calculator Section
+        calc_box = QGroupBox("CALCULATOR")
+        calc_lay = QVBoxLayout(calc_box)
+        calc_lay.setSpacing(10)
+
+        calc_text = QLabel(
+            "<b>Prison Sentence:</b><br>"
+            "Enter hours and minutes of your prison sentence. The calculator will "
+            "automatically convert this to merits based on the rate configured in Settings.<br><br>"
+            "<b>Merits:</b><br>"
+            "Merits are calculated automatically from your prison sentence time. "
+            "You can also manually enter merits if needed. When manually entered, "
+            "the time will update accordingly.<br><br>"
+            "<b>Merits with Fee:</b><br>"
+            "This shows the total merits needed when sending to another player, "
+            "accounting for the in-game transfer fee. Double-click this value to copy it.<br><br>"
+            "<b>aUEC Value:</b><br>"
+            "Displays the aUEC (in-game currency) equivalent of your merits. "
+            "Double-click this value to copy it."
+        )
+        calc_text.setWordWrap(True)
+        calc_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        calc_lay.addWidget(calc_text)
+        scroll_layout.addWidget(calc_box)
+
+        # Actions Section
+        actions_box = QGroupBox("ACTIONS")
+        actions_lay = QVBoxLayout(actions_box)
+        actions_lay.setSpacing(10)
+
+        actions_text = QLabel(
+            "<b>Copy Report:</b><br>"
+            "Copies a formatted report containing all calculation results to "
+            "your clipboard. The report includes prison sentence time, merits "
+            "entered, merits with fee, and aUEC value.<br><br>"
+            "<b>Save Report:</b><br>"
+            "Saves the formatted report to a text file. You can choose the "
+            "save location in the file dialog that appears."
+        )
+        actions_text.setWordWrap(True)
+        actions_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        actions_lay.addWidget(actions_text)
+        scroll_layout.addWidget(actions_box)
+
+        # Keyboard Shortcuts Section
+        shortcuts_box = QGroupBox("KEYBOARD SHORTCUTS")
+        shortcuts_lay = QVBoxLayout(shortcuts_box)
+        shortcuts_lay.setSpacing(10)
+
+        shortcuts_text = QLabel(
+            "<b>Copy Report:</b> Ctrl+C<br>"
+            "<b>Save Report:</b> Ctrl+S<br>"
+            "<b>Clear Inputs:</b> Ctrl+R<br>"
+            "<b>Minimize:</b> Esc<br>"
+            "<b>Toggle Transparency:</b> Ctrl+Shift+T<br>"
+            "<b>Toggle Always On Top:</b> Ctrl+Shift+A<br>"
+            "<b>Toggle Visibility:</b> Ctrl+M<br>"
+            "<b>Open Settings:</b> Ctrl+O<br>"
+            "<b>Exit:</b> Shift+Esc<br><br>"
+            "All shortcuts can be customized in the Settings tab."
+        )
+        shortcuts_text.setWordWrap(True)
+        shortcuts_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        shortcuts_lay.addWidget(shortcuts_text)
+        scroll_layout.addWidget(shortcuts_box)
+
+        # Settings Section
+        settings_box = QGroupBox("SETTINGS")
+        settings_lay = QVBoxLayout(settings_box)
+        settings_lay.setSpacing(10)
+
+        settings_text = QLabel(
+            "<b>Display:</b><br>"
+            "• <b>DPI Scale:</b> Manually adjust the UI scaling percentage "
+            "(50-200%). Disabled when Auto Scaling is enabled.<br>"
+            "• <b>Auto Scaling:</b> Automatically scales the UI based on your "
+            "screen's DPI. When enabled, manual scale controls are disabled.<br>"
+            "• <b>Base Font Size:</b> Sets the base font size for the application "
+            "(8-48pt). Disabled when Auto Scaling is enabled.<br>"
+            "• <b>Auto Scale Bias:</b> Adjusts how aggressive the auto-scaling "
+            "is (0.5-1.5). Lower values make the UI more compact.<br><br>"
+            "<b>Behavior:</b><br>"
+            "• <b>Always On Top:</b> Keeps the window above all other windows."
+            "<br>"
+            "• <b>Minimize to Tray:</b> Minimizing the window sends it to "
+            "the system tray instead of the taskbar.<br><br>"
+            "<b>Transparency:</b><br>"
+            "• <b>Enable Transparency:</b> Toggles window transparency on/off.<br>"
+            "• <b>Transparency Slider:</b> Adjusts window opacity from 30% to 100%.<br><br>"
+            "<b>Rates:</b><br>"
+            "• <b>Prison Rate:</b> Seconds per merit (default: 1.0). Used to "
+            "convert time to merits.<br>"
+            "• <b>aUEC Conversion:</b> Percentage rate for converting merits "
+            "to aUEC (default: 61.8%).<br>"
+            "• <b>Fee:</b> Transfer fee percentage (default: 0.5%). Used when "
+            "calculating total merits for player-to-player transfers."
+        )
+        settings_text.setWordWrap(True)
+        settings_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        settings_lay.addWidget(settings_text)
+        scroll_layout.addWidget(settings_box)
+
+        # System Tray Section
+        tray_box = QGroupBox("SYSTEM TRAY")
+        tray_lay = QVBoxLayout(tray_box)
+        tray_lay.setSpacing(10)
+
+        tray_text = QLabel(
+            "The application runs in the system tray when minimized (if enabled). "
+            "Right-click the tray icon to access:<br>"
+            "• Show/Hide: Toggle window visibility<br>"
+            "• Copy Report: Copy current calculation results<br>"
+            "• Save Report: Save current calculation results<br>"
+            "• Settings: Open the Settings tab<br>"
+            "• Exit: Close the application<br><br>"
+            "Double-click the tray icon to quickly show/hide the window."
+        )
+        tray_text.setWordWrap(True)
+        tray_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        tray_lay.addWidget(tray_text)
+        scroll_layout.addWidget(tray_box)
+
+        # Updates Section
+        updates_box = QGroupBox("UPDATES")
+        updates_lay = QVBoxLayout(updates_box)
+        updates_lay.setSpacing(10)
+
+        updates_text = QLabel(
+            "The application can automatically check for updates from GitHub "
+            "releases.<br><br>"
+            "<b>Checking for Updates:</b><br>"
+            "Click 'Check for Updates' in the About tab. The app will connect "
+            "to GitHub and compare your current version with the latest release."
+            "<br><br>"
+            "<b>Download Options:</b><br>"
+            "• <b>Download:</b> Downloads the installer for later installation. "
+            "You'll be prompted to install it the next time you start the app.<br>"
+            "• <b>Download and Update:</b> Downloads and immediately launches "
+            "the installer, then closes the current app session.<br><br>"
+            "Updates are checked against the latest release on the GitHub "
+            "repository. The installer is automatically downloaded and can be "
+            "run to update the application."
+        )
+        updates_text.setWordWrap(True)
+        updates_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        updates_lay.addWidget(updates_text)
+        scroll_layout.addWidget(updates_box)
+
+        # Tips Section
+        tips_box = QGroupBox("TIPS & TRICKS")
+        tips_lay = QVBoxLayout(tips_box)
+        tips_lay.setSpacing(10)
+
+        tips_text = QLabel(
+            "• Double-click any output value (Merits with Fee or aUEC Value) "
+            "to quickly copy it.<br>"
+            "• Use keyboard shortcuts for faster workflow - customize them "
+            "in Settings.<br>"
+            "• Adjust transparency to make the window less intrusive while "
+            "gaming.<br>"
+            "• Enable 'Always On Top' to keep the calculator visible while "
+            "using other applications.<br>"
+            "• The calculator automatically saves your window position and "
+            "settings.<br>"
+            "• All settings are saved automatically when changed - no need "
+            "to click Save."
+        )
+        tips_text.setWordWrap(True)
+        tips_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        tips_lay.addWidget(tips_text)
+        scroll_layout.addWidget(tips_box)
+
+        # Add stretch at bottom
+        scroll_layout.addStretch()
+
+        # Set scroll content and add to layout
+        scroll_area.setWidget(scroll_content)
+        v.addWidget(scroll_area)
+
+        # Style the help content - match app theme
+        # Don't override global styles, just ensure proper background
+        scroll_content.setObjectName("scroll_content")
+        scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: #101216;
+                border: none;
+            }
+            QWidget#scroll_content {
+                background-color: #101216;
+            }
+            """
+        )
 
 
 def create_qt_app(settings, calculator):

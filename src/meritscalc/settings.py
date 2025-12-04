@@ -26,46 +26,35 @@ DEFAULT_SETTINGS = {
     # Core calculation settings
     "rate_merits_seconds": 1.0,
     "rate_merits_auec": 0.618,
-    "discount_percent": 0.0,
     "fee_percent": 0.5,
     # Window appearance and behavior
     "window_x": 100,
     "window_y": 100,
     "window_width": 500,
     "window_height": 720,
-    "window_opacity": 0.9,
-    "aspect_ratio_enforced": False,
-    "aspect_ratio_width": 16,
-    "aspect_ratio_height": 9,
+    "window_transparency": 0.9,
     "always_on_top": False,
-    # Window snapping and positioning
-    "snap_to_edges": True,
-    "snap_to_windows": False,
-    "snap_distance": 20,
-    "edge_snap_distance": 20,
-    "window_snap_distance": 30,
-    "show_snap_preview": True,
     # UI behavior
     "minimize_to_tray": False,
     # Transparency and visual effects
     "transparency_enabled": True,
-    "transparency_default": 0.9,
-    "transparency_min": 0.3,
-    "transparency_max": 1.0,
     # High DPI and scaling
     "dpi_aware": True,
     "auto_scale_ui": True,
-    "auto_scale_bias": 0.90,
+    "auto_scale_bias": 0.80,
     "ui_scale": 100.0,
+    "font_size": 14.0,
     # Keyboard shortcuts (customizable)
     "shortcuts": {
-        "save": {"ctrl": True, "shift": False, "alt": False, "key": "S"},
-        "quit": {"ctrl": True, "shift": False, "alt": False, "key": "Q"},
-        "copy_report": {"ctrl": True, "shift": False, "alt": False, "key": "C"},
-        "clear": {"ctrl": True, "shift": False, "alt": False, "key": "R"},
-        "minimize": {"ctrl": False, "shift": False, "alt": False, "key": "Escape"},
-        "toggle_transparency": {"ctrl": True, "shift": True, "alt": False, "key": "T"},
-        "toggle_always_on_top": {"ctrl": True, "shift": True, "alt": False, "key": "A"},
+        "save_report": "Ctrl+S",
+        "copy_report": "Ctrl+C",
+        "quit": "Shift+Esc",
+        "clear_inputs": "Ctrl+R",
+        "minimize": "Esc",
+        "toggle_transparency": "Ctrl+Shift+T",
+        "toggle_always_on_top": "Ctrl+Shift+A",
+        "toggle_visibility": "Ctrl+M",
+        "open_settings": "Ctrl+O",
     },
     # Last used inputs
     "last_inputs": {
@@ -75,13 +64,6 @@ DEFAULT_SETTINGS = {
         "merits": "00",
         "auec": "00",
     },
-    # File paths and preferences
-    "default_report_path": "",
-    "confirm_exit": True,
-    # Performance settings
-    "target_fps": 60,
-    "vsync_enabled": True,
-    "redraw_on_change": True,
 }
 
 
@@ -165,15 +147,6 @@ class SettingsManager:
                     observer(key, value)
                 except (OSError, IOError) as e:
                     print(f"Error in settings observer: {e}")
-
-    def get_aspect_ratio(self):
-        """Get current aspect ratio if enforced."""
-        if self._settings.get("aspect_ratio_enforced", False):
-            return (
-                self._settings.get("aspect_ratio_width", 16),
-                self._settings.get("aspect_ratio_height", 9),
-            )
-        return None
 
     def set_window_geometry(self, x, y, width, height):
         """Set window geometry settings."""

@@ -16,6 +16,7 @@ venv/
 .serena/
 .specify/
 .claude/
+.cursor/
 
 # Build artifacts
 build/

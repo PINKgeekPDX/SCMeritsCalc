@@ -27,35 +27,20 @@ DEFAULT_SETTINGS = {
     "rate_merits_seconds": 1.0,
     "rate_merits_auec": 0.618,
     "fee_percent": 0.5,
+    # Updates
+    "auto_check_updates": True,
+    "never_update": False,
     # Window appearance and behavior
     "window_x": 100,
     "window_y": 100,
-    "window_width": 500,
-    "window_height": 720,
+    "window_width": 360,
+    "window_height": 500,
     "window_transparency": 0.9,
     "always_on_top": False,
     # UI behavior
     "minimize_to_tray": False,
     # Transparency and visual effects
     "transparency_enabled": True,
-    # High DPI and scaling
-    "dpi_aware": True,
-    "auto_scale_ui": True,
-    "auto_scale_bias": 0.80,
-    "ui_scale": 100.0,
-    "font_size": 14.0,
-    # Keyboard shortcuts (customizable)
-    "shortcuts": {
-        "save_report": "Ctrl+S",
-        "copy_report": "Ctrl+C",
-        "quit": "Shift+Esc",
-        "clear_inputs": "Ctrl+R",
-        "minimize": "Esc",
-        "toggle_transparency": "Ctrl+Shift+T",
-        "toggle_always_on_top": "Ctrl+Shift+A",
-        "toggle_visibility": "Ctrl+M",
-        "open_settings": "Ctrl+O",
-    },
     # Last used inputs
     "last_inputs": {
         "time_h": "00",

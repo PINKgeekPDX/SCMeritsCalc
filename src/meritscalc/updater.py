@@ -141,6 +141,33 @@ class UpdateManager:
 
         raise ValueError("No suitable installer found in the release assets.")
 
+    def get_installer_meta(self) -> tuple[str, Optional[int], Optional[str]]:
+        """
+        Return (url, size_bytes, name) for the selected installer asset.
+        """
+        if not self.latest_release_info:
+            raise ValueError("No update information available.")
+        assets = self.latest_release_info.get("assets", [])
+        for asset in assets:
+            name = asset.get("name", "")
+            lname = name.lower()
+            if lname.endswith(".exe") and "setup" in lname:
+                return (
+                    asset.get("browser_download_url"),
+                    asset.get("size"),
+                    name,
+                )
+        for asset in assets:
+            name = asset.get("name", "")
+            lname = name.lower()
+            if lname.endswith(".exe"):
+                return (
+                    asset.get("browser_download_url"),
+                    asset.get("size"),
+                    name,
+                )
+        raise ValueError("No suitable installer found in the release assets.")
+
     def download_update(
         self,
         download_dir: Optional[Path] = None,

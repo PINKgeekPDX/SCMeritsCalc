@@ -7,7 +7,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import QEvent, QRect, Qt, QUrl, QThread, pyqtSignal
+
+from PyQt6.QtCore import (
+    QEvent,
+    QRect,
+    Qt,
+    QUrl,
+    QThread,
+    pyqtSignal,
+    QPropertyAnimation,
+    QEasingCurve,
+    QTimer,
+)
 from PyQt6.QtGui import (
     QDesktopServices,
     QFont,
@@ -16,6 +27,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QKeySequence,
     QShortcut,
+    QGuiApplication,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -24,28 +36,36 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMenu,
-    QProgressBar,
-    QPushButton,
     QScrollArea,
     QSlider,
     QSystemTrayIcon,
-    QTableWidget,
-    QTableWidgetItem,
     QTabWidget,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
     QTextEdit,
+    QGraphicsOpacityEffect,
 )
 
 from meritscalc.updater import UpdateManager
 from meritscalc.settings import _app_data_dir
+from meritscalc.theme import (
+    get_main_stylesheet,
+    get_dialog_stylesheet,
+    ANIM_DURATION_NORMAL,
+)
+from meritscalc.widgets import (
+    HoloInput,
+    SciFiPanel,
+    GlowLabel,
+    AnimatedProgressBar,
+    QuantumButton,
+)
 
 try:
     from PyQt6.QtWidgets import QKeySequenceEdit
@@ -86,7 +106,7 @@ def get_app_icon() -> QIcon:
     return QIcon(pm)
 
 
-class ClickableGroupBox(QGroupBox):
+class ClickableSciFiPanel(SciFiPanel):
     def __init__(self, title="", parent=None):
         super().__init__(title, parent)
         self.on_double_click = None
@@ -143,27 +163,33 @@ class UpdateDialog(QDialog):
         self.manager = UpdateManager()
         self.worker = None
         self.installer_path = None
+        self._btn_policy = QSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self._init_ui()
         self._start_check()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        layout.setContentsMargins(24, 24, 24, 24)
 
-        # Status Header
-        self.lbl_status_header = QLabel("Checking for Updates...")
+        # Status Header with glow effect
+        self.lbl_status_header = GlowLabel(
+            "Checking for Updates...", self, glow_enabled=True
+        )
         f = QFont()
-        f.setPointSize(14)
+        f.setPointSize(16)
         f.setBold(True)
         self.lbl_status_header.setFont(f)
         self.lbl_status_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_status_header)
 
-        # Progress Bar
-        self.progress_bar = QProgressBar()
+        # Animated Progress Bar
+        self.progress_bar = AnimatedProgressBar(self)
         self.progress_bar.setRange(0, 0)  # Indeterminate initially
         self.progress_bar.setTextVisible(False)
+        self.progress_bar.setFixedHeight(28)
         layout.addWidget(self.progress_bar)
 
         # Status Text
@@ -175,16 +201,17 @@ class UpdateDialog(QDialog):
         self.txt_error = QTextEdit()
         self.txt_error.setReadOnly(True)
         self.txt_error.setVisible(False)
-        self.txt_error.setStyleSheet(
-            "color: #ff5555; background: #1a1a1a; border: 1px solid #ff5555;"
-        )
         layout.addWidget(self.txt_error)
 
-        # Buttons
+        # Buttons with glow effects
         self.btn_box = QHBoxLayout()
-        self.btn_download = QPushButton("Download")
-        self.btn_install = QPushButton("Download and Update")
-        self.btn_close = QPushButton("Cancel")
+        self.btn_download = QuantumButton("Download", self)
+        self.btn_install = QuantumButton("Download and Update", self)
+        self.btn_close = QuantumButton("Cancel", self)
+
+        for btn in (self.btn_download, self.btn_install, self.btn_close):
+            btn.setMinimumHeight(28)
+            btn.setSizePolicy(self._btn_policy)
 
         self.btn_download.setVisible(False)
         self.btn_install.setVisible(False)
@@ -202,30 +229,8 @@ class UpdateDialog(QDialog):
         self.btn_box.addStretch()
         layout.addLayout(self.btn_box)
 
-        # Style
-        self.setStyleSheet(
-            """
-            QDialog { background-color: #101216; color: #e6e9ef; }
-            QLabel { color: #e6e9ef; }
-            QProgressBar {
-                border: 1px solid #00d9ff;
-                border-radius: 4px;
-                text-align: center;
-                background: #1f2228;
-            }
-            QProgressBar::chunk { background-color: #00d9ff; }
-            QPushButton {
-                background: #23262c;
-                color: #e6f7ff;
-                border: 1px solid #00d9ff;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover { background: #00a2cc; }
-            QPushButton:pressed { background: #00d9ff; }
-        """
-        )
+        # Apply futuristic theme
+        self.setStyleSheet(get_dialog_stylesheet())
 
     def _start_check(self):
         self.worker = UpdateWorker(self.manager, "check")
@@ -255,7 +260,7 @@ class UpdateDialog(QDialog):
 
     def _on_progress(self, pct, status):
         self.lbl_status.setText(status)
-        if self.worker.mode == "download":
+        if self.worker and self.worker.mode == "download":
             self.progress_bar.setValue(int(pct))
 
     def _on_check_finished(self, result):
@@ -312,6 +317,155 @@ class UpdateDialog(QDialog):
         self.btn_install.setVisible(False)
 
 
+class UpdateFoundDialog(QDialog):
+    """Shown when an update is found during startup auto-check."""
+
+    def __init__(
+        self,
+        parent,
+        manager: UpdateManager,
+        version_str: str,
+        notes: str | None,
+        settings,
+    ):
+        super().__init__(parent)
+        self.manager = manager
+        self.settings = settings
+        self.version_str = version_str
+        self.notes = notes or "No release notes provided."
+        self.worker: UpdateWorker | None = None
+        self.download_path: str | None = None
+        self._btn_policy = QSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+
+        self.setWindowTitle("Update Available")
+        self.setFixedSize(540, 360)
+        self._init_ui()
+        self.setStyleSheet(get_dialog_stylesheet())
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        header = GlowLabel(
+            f"Update Found: v{self.version_str}", self, glow_enabled=True
+        )
+        f = QFont()
+        f.setPointSize(15)
+        f.setBold(True)
+        header.setFont(f)
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        # Meta details
+        try:
+            _, size_bytes, name = self.manager.get_installer_meta()
+        except Exception:
+            _, size_bytes, name = ("", None, "")
+
+        size_str = "Unknown"
+        if isinstance(size_bytes, int) and size_bytes > 0:
+            size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+
+        meta_box = SciFiPanel("UPDATE DETAILS")
+        meta_layout = QVBoxLayout(meta_box)
+        meta_layout.setContentsMargins(6, 10, 6, 6)
+        meta_layout.setSpacing(4)
+        meta_layout.addWidget(QLabel(f"Version: {self.version_str}"))
+        meta_layout.addWidget(QLabel(f"Installer: {name or 'Not available'}"))
+        meta_layout.addWidget(QLabel(f"Size: {size_str}"))
+        self.lbl_status = QLabel("Select an option below.")
+        meta_layout.addWidget(self.lbl_status)
+        layout.addWidget(meta_box)
+
+        # Notes (truncated)
+        notes_box = SciFiPanel("RELEASE NOTES")
+        notes_layout = QVBoxLayout(notes_box)
+        notes_layout.setContentsMargins(6, 10, 6, 6)
+        notes_layout.setSpacing(4)
+        notes_label = QLabel(self.notes.strip())
+        notes_label.setWordWrap(True)
+        notes_layout.addWidget(notes_label)
+        layout.addWidget(notes_box)
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+        self.btn_now = QuantumButton("Download & Update", self)
+        self.btn_later = QuantumButton("Download & Update Next Exit", self)
+        self.btn_ignore = QuantumButton("Ignore Update", self)
+        for b in (self.btn_now, self.btn_later, self.btn_ignore):
+            b.setMinimumHeight(28)
+            b.setSizePolicy(self._btn_policy)
+        self.btn_now.clicked.connect(
+            lambda: self._start_download(install_now=True, next_exit=False)
+        )
+        self.btn_later.clicked.connect(
+            lambda: self._start_download(install_now=False, next_exit=True)
+        )
+        self.btn_ignore.clicked.connect(self.reject)
+        btn_row.addWidget(self.btn_now)
+        btn_row.addWidget(self.btn_later)
+        btn_row.addWidget(self.btn_ignore)
+        layout.addLayout(btn_row)
+
+        # Never update toggle
+        toggle_row = QHBoxLayout()
+        toggle_row.setSpacing(6)
+        toggle_row.addStretch()
+        self.chk_never = QCheckBox("Never Update")
+        self.chk_never.setChecked(bool(self.settings.get("never_update", False)))
+        self.chk_never.toggled.connect(
+            lambda v: self.settings.set("never_update", bool(v))
+        )
+        toggle_row.addWidget(self.chk_never)
+        layout.addLayout(toggle_row)
+
+    def _set_busy(self, busy: bool):
+        for btn in (self.btn_now, self.btn_later, self.btn_ignore):
+            btn.setEnabled(not busy)
+
+    def _start_download(self, install_now: bool, next_exit: bool):
+        if self.worker:
+            return
+        self._set_busy(True)
+        self.lbl_status.setText("Downloading update...")
+        dl_dir = _app_data_dir() / "updates"
+        self.worker = UpdateWorker(self.manager, "download", dl_dir)
+        self.worker.progress.connect(
+            lambda pct, status: self.lbl_status.setText(status)
+        )
+        self.worker.error.connect(self._on_error)
+        self.worker.finished.connect(
+            lambda path: self._on_download_finished(path, install_now, next_exit)
+        )
+        self.worker.start()
+
+    def _on_download_finished(self, path, install_now: bool, next_exit: bool):
+        self.download_path = path
+        if next_exit:
+            if self.settings:
+                self.settings.set("pending_update_path", str(path))
+            self.lbl_status.setText("Update downloaded. It will install on next exit.")
+            self._set_busy(False)
+            return
+        if install_now:
+            try:
+                self.lbl_status.setText("Launching installer...")
+                self.manager.run_installer(path)
+                app = QApplication.instance()
+                if app is not None:
+                    app.quit()
+            except Exception as e:
+                self._on_error(str(e))
+
+    def _on_error(self, msg: str):
+        self.lbl_status.setText(f"Error: {msg}")
+        self._set_busy(False)
+
+
 class QtMeritCalcApp(QMainWindow):
     """Application main window for Merits calculations and reporting."""
 
@@ -341,12 +495,24 @@ class QtMeritCalcApp(QMainWindow):
         self.spin_font = None
         self.tray = None
         self._shortcuts = []
+        self._startup_anim = None
+        self._startup_effect = None
+        self._auto_update_worker = None
         self.setWindowTitle("SC MERIT CALC")
-        # Apply saved window geometry
+        # Initialize tab animation
+        self._tab_animation = None
+        self._dpi_scale_factor = self._compute_dpi_scale()
+
+        # Fixed window size to avoid scaling artifacts, scaled by DPI
         g = self.settings.get_window_geometry()
-        self.setGeometry(QRect(g["x"], g["y"], g["width"], g["height"]))
+        base_w, base_h = 392, 534
+        scaled_w = int(round(base_w * self._dpi_scale_factor))
+        scaled_h = int(round(base_h * self._dpi_scale_factor))
+        self.setGeometry(QRect(g["x"], g["y"], scaled_w, scaled_h))
+        self.setFixedSize(scaled_w, scaled_h)
         self._init_ui()
         self._init_tray()
+
         # Ensure geometry is saved on application quit (covers tray exit)
         app = QApplication.instance()
         if app is not None:
@@ -358,23 +524,26 @@ class QtMeritCalcApp(QMainWindow):
                     self.geometry().height(),
                 )
             )
-        # Apply initial auto scaling if enabled
-        if bool(self.settings.get("auto_scale_ui", True)):
-            self._apply_auto_scale()
+        # Ensure geometry is saved on application quit (covers tray exit)
 
         # Apply initial transparency
         if bool(self.settings.get("transparency_enabled", True)):
             self.setWindowOpacity(float(self.settings.get("window_transparency", 0.9)))
+        # Soft fade-in on startup to reinforce holo feel
+        QTimer.singleShot(10, self._animate_startup)
+
+        # Store reference to observer for later restoration
+        self._settings_observers = []
+
+        # Initialize Toast Overlay
+        self._init_toasts()
+
+        # Apply global application styles (like tooltips)
+        self._apply_global_styles()
 
         # React to settings changes instantly
         def _on_setting_changed(key, value):
-            if key == "ui_scale":
-                if hasattr(self, "spin_font") and self.spin_font:
-                    self._apply_font_size(self.spin_font.value())
-            elif key == "font_size":
-                if hasattr(self, "spin_font") and self.spin_font:
-                    self._apply_font_size(float(value))
-            elif key == "window_transparency":
+            if key == "window_transparency":
                 try:
                     self.setWindowOpacity(float(value))
                 except Exception:
@@ -385,11 +554,6 @@ class QtMeritCalcApp(QMainWindow):
                     self.show()
                 except Exception:
                     pass
-            elif key == "auto_scale_ui" and bool(value):
-                self._apply_auto_scale()
-            elif key == "shortcuts":
-                self._register_shortcuts()
-            elif key == "fee_percent":
                 try:
                     val = float(value)
                     if hasattr(self, "lbl_fee_header"):
@@ -398,11 +562,78 @@ class QtMeritCalcApp(QMainWindow):
                 except Exception:
                     pass
 
+            self.show_toast("Settings Saved", 1500)
+
         self.settings.add_observer(_on_setting_changed)
-        self._register_shortcuts()
 
         # Check for pending updates
         self._check_pending_update()
+        # Silent update check at startup
+        QTimer.singleShot(0, self._auto_check_updates_on_start)
+
+    def _animate_startup(self):
+        """Fade in the main window for a subtle holo effect."""
+        if self._startup_anim:
+            return
+        effect = QGraphicsOpacityEffect(self)
+        effect.setOpacity(0.0)
+        self.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", self)
+        anim.setDuration(350)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        def _cleanup():
+            # Remove effect after animation to avoid stacking
+            self.setGraphicsEffect(None)
+
+        anim.finished.connect(_cleanup)
+        anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._startup_anim = anim
+        self._startup_effect = effect
+
+    def _init_toasts(self):
+        # Status-bar–based toast replacement
+        self._toast = None
+
+    def show_toast(self, message: str, duration: int = 2500):
+        if hasattr(self, "status_label") and hasattr(self, "_status_effect"):
+            self.status_label.setText(message)
+            self._status_anim.stop()
+            self._status_anim.setStartValue(self._status_effect.opacity())
+            self._status_anim.setEndValue(1.0)
+            self._status_anim.start()
+            self._status_timer.start(duration)
+
+    def _fade_out_status(self):
+        if not hasattr(self, "_status_effect"):
+            return
+        self._status_anim.stop()
+        self._status_anim.setStartValue(self._status_effect.opacity())
+        self._status_anim.setEndValue(0.0)
+        self._status_anim.start()
+
+    def _apply_global_styles(self):
+        """Apply global stylesheet enhancements like tooltips."""
+        # Get existing stylesheet or start fresh
+        app = QApplication.instance()
+        current_style = app.styleSheet() if app else ""
+
+        tooltip_style = """
+        QToolTip {
+            background-color: #0a1016;
+            color: #a0d0ff;
+            border: 1px solid #00a2cc;
+            padding: 4px;
+            border-radius: 4px;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 12px;
+        }
+        """
+        if tooltip_style not in current_style:
+            if app:
+                app.setStyleSheet(current_style + tooltip_style)
 
     def _check_pending_update(self):
         pending = self.settings.get("pending_update_path")
@@ -432,21 +663,8 @@ class QtMeritCalcApp(QMainWindow):
             btns.accepted.connect(dlg.accept)
             btns.rejected.connect(dlg.reject)
 
-            # Style to match
-            dlg.setStyleSheet(
-                """
-                QDialog { background-color: #101216; color: #e6e9ef; }
-                QLabel { color: #e6e9ef; }
-                QPushButton {
-                    background: #23262c;
-                    color: #e6f7ff;
-                    border: 1px solid #00d9ff;
-                    border-radius: 6px;
-                    padding: 8px 16px;
-                }
-                QPushButton:hover { background: #00a2cc; }
-            """
-            )
+            # Apply futuristic theme
+            dlg.setStyleSheet(get_dialog_stylesheet())
 
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 try:
@@ -461,14 +679,51 @@ class QtMeritCalcApp(QMainWindow):
         dlg = UpdateDialog(self, self.settings)
         dlg.exec()
 
+    def _auto_check_updates_on_start(self):
+        """Silently check for updates at startup if enabled."""
+        if bool(self.settings.get("never_update", False)):
+            return
+        if not bool(self.settings.get("auto_check_updates", True)):
+            return
+        pending = self.settings.get("pending_update_path")
+        if pending and Path(pending).exists():
+            return
+
+        manager = UpdateManager()
+
+        def _on_progress(_pct, _status):
+            return
+
+        def _on_error(_msg):
+            return
+
+        def _on_finished(result):
+            available, version_str, notes = result
+            if available:
+                dlg = UpdateFoundDialog(
+                    self, manager, version_str, notes, self.settings
+                )
+                dlg.exec()
+
+        worker = UpdateWorker(manager, "check")
+        worker.progress.connect(_on_progress)
+        worker.error.connect(_on_error)
+        worker.finished.connect(_on_finished)
+        self._auto_update_worker = worker
+        worker.start()
+
     def _init_ui(self):
         container = QWidget()
         self.setCentralWidget(container)
         v = QVBoxLayout(container)
-        v.setContentsMargins(12, 12, 12, 12)
-        v.setSpacing(12)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(6)
+
         self.tabs = QTabWidget()
-        v.addWidget(self.tabs)
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+        v.addWidget(self.tabs, 1)
+        # Status bar lives under the tabs to surface toast messages
+        self._init_status_bar(v)
         calc = QWidget()
         settings_tab = QWidget()
         help_tab = QWidget()
@@ -478,17 +733,85 @@ class QtMeritCalcApp(QMainWindow):
         self.tabs.addTab(help_tab, "HELP")
         self.tabs.addTab(about_tab, "ABOUT")
         calc_layout = QVBoxLayout(calc)
+        # Tighter margins and spacing to reduce vertical gaps on the calculator tab
         calc_layout.setContentsMargins(8, 8, 8, 8)
-        calc_layout.setSpacing(12)
+        calc_layout.setSpacing(2)
+
         self._add_prison(calc_layout)
         self._add_merits(calc_layout)
         self._add_fee(calc_layout)
         self._add_auec(calc_layout)
         self._add_actions(calc_layout)
+
         self._build_settings_tab(settings_tab)
-        self._build_help_tab(help_tab)
+        self._build_help_tab_v2(help_tab)
         self._build_about_tab(about_tab)
         self._apply_styles()
+
+    def _compute_dpi_scale(self) -> float:
+        """Compute a DPI scale factor based on primary screen DPI."""
+        try:
+            screen = QGuiApplication.primaryScreen()
+            dpi = screen.logicalDotsPerInch() if screen else 96.0
+        except Exception:
+            dpi = 96.0
+        # Clamp to reasonable bounds
+        return max(0.85, min(2.0, dpi / 96.0))
+
+    def _init_status_bar(self, parent_layout: QVBoxLayout):
+        """Create a bottom status bar for toast-style messages."""
+        bar = QWidget(self)
+        bar.setObjectName("statusBar")
+        bar.setMinimumHeight(16)
+        bar.setMaximumHeight(18)
+        bar.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        )
+        bar_layout = QHBoxLayout(bar)
+        bar_layout.setContentsMargins(6, 2, 6, 2)
+        bar_layout.setSpacing(4)
+
+        self.status_label = QLabel("Ready")
+        self.status_label.setObjectName("statusLabel")
+        self.status_label.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+        bar_layout.addWidget(self.status_label, 1)
+
+        # Opacity effect for fade in/out
+        effect = QGraphicsOpacityEffect(bar)
+        effect.setOpacity(0.0)
+        bar.setGraphicsEffect(effect)
+        self._status_effect = effect
+
+        # Animation + timer
+        self._status_anim = QPropertyAnimation(effect, b"opacity", self)
+        self._status_anim.setDuration(250)
+        self._status_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.timeout.connect(self._fade_out_status)
+
+        # Style the bar to match the app chrome
+        bar.setStyleSheet(
+            """
+            QWidget#statusBar {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #0c1117, stop:1 #0a0e13);
+                border: 1px solid #0078a8;
+                border-radius: 4px;
+            }
+            QLabel#statusLabel {
+                color: #e8f5ff;
+                font-weight: 600;
+                padding-left: 2px;
+            }
+            """
+        )
+
+        parent_layout.addWidget(bar, 0)
+        self.status_bar = bar
 
     def _label(self, text, size):
         lbl = QLabel(text)
@@ -500,29 +823,49 @@ class QtMeritCalcApp(QMainWindow):
         return lbl
 
     def _card(self, title):
-        box = QGroupBox(title)
+        box = SciFiPanel(title)
+        box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
         lay = QVBoxLayout(box)
-        lay.setSpacing(8)
+        lay.setSpacing(4)
+        # Add margin to content for the cut corners of SciFiPanel
+        lay.setContentsMargins(8, 8, 8, 8)
+
         return box, lay
 
     def _add_prison(self, parent):
         box, lay = self._card("PRISON SENTENCE")
         row = QHBoxLayout()
-        row.setSpacing(12)
-        self.in_hours = QLineEdit("00")
-        self.in_minutes = QLineEdit("00")
+        row.setSpacing(2)
+
+        self.in_hours = HoloInput("00")
+        self.in_minutes = HoloInput("00")
+        for field in (self.in_hours, self.in_minutes):
+            field.setFixedHeight(32)
         self.in_hours.setAccessibleName("HoursInput")
         self.in_minutes.setAccessibleName("MinutesInput")
         self.in_hours.setToolTip("Enter hours")
         self.in_minutes.setToolTip("Enter minutes")
+
+        policy_exp = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.in_hours.setSizePolicy(policy_exp)
+        self.in_minutes.setSizePolicy(policy_exp)
+
         hcol = QVBoxLayout()
-        hcol.addWidget(self._label("HOURS", 10))
+        hcol.setSpacing(1)
+
+        hcol.addWidget(self._label("HOURS", 8))
         hcol.addWidget(self.in_hours)
         mcol = QVBoxLayout()
-        mcol.addWidget(self._label("MINUTES", 10))
+        mcol.setSpacing(1)
+
+        mcol.addWidget(self._label("MINUTES", 8))
         mcol.addWidget(self.in_minutes)
-        row.addLayout(hcol)
-        row.addLayout(mcol)
+        row.addLayout(hcol, 1)
+        row.addLayout(mcol, 1)
         lay.addLayout(row)
         parent.addWidget(box)
         self.in_hours.textEdited.connect(self._on_time_edited)
@@ -533,78 +876,143 @@ class QtMeritCalcApp(QMainWindow):
     def _add_merits(self, parent):
         box, lay = self._card("MERITS")
         row = QHBoxLayout()
-        self.in_merits = QLineEdit("")
+        self.in_merits = HoloInput("")
+        self.in_merits.setFixedHeight(32)
         self.in_merits.setAccessibleName("MeritsInput")
         self.in_merits.setToolTip("Enter merits or let them auto-calculate from time")
         self.in_merits.setProperty("mode", "auto")
-        row.addWidget(self.in_merits)
+
+        self.in_merits.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        )
+
+        row.addWidget(self.in_merits, 1)
         lay.addLayout(row)
         self.in_merits.textEdited.connect(self._on_merits_edited)
         self.in_merits.textChanged.connect(self._calculate)
         parent.addWidget(box)
 
     def _add_fee(self, parent):
-        box = ClickableGroupBox()
+        box = ClickableSciFiPanel("MERITS WITH FEE")
+        box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
         box.on_double_click = self._copy_fee_val
         box.setToolTip(
             "Total merits needed when sending to another player,\n"
             "accounting for the in-game transfer fee."
         )
         lay = QVBoxLayout(box)
+        lay.setContentsMargins(4, 8, 4, 4)
+        lay.setSpacing(2)
+
         fee_pct = float(self.settings.get("fee_percent", 0.5))
-        self.lbl_fee_header = self._label(f"MERITS WITH {fee_pct:.1f}% FEE (☼)", 12)
+        self.lbl_fee_header = self._label(f"MERITS WITH {fee_pct:.1f}% FEE (☼)", 9)
         lay.addWidget(self.lbl_fee_header)
-        self.out_merits_fee = self._label("☼ 0", 36)
+        self.out_merits_fee = GlowLabel("☼ 0", box, glow_enabled=True)
         self.out_merits_fee.setAccessibleName("MeritsFeeOutput")
+        f = QFont()
+        f.setPointSize(14)
+        f.setBold(True)
+        self.out_merits_fee.setFont(f)
+        self.out_merits_fee.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.out_merits_fee.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        )
+
         lay.addWidget(self.out_merits_fee)
         parent.addWidget(box)
 
     def _add_auec(self, parent):
-        box = ClickableGroupBox()
+        box = ClickableSciFiPanel("AUEC VALUE")
+        box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
         box.on_double_click = self._copy_auec_val
         lay = QVBoxLayout(box)
-        lay.addWidget(self._label("aUEC VALUE (¤)", 14))
-        self.out_auec = self._label("¤ 0", 36)
+        lay.setContentsMargins(4, 8, 4, 4)
+        lay.setSpacing(2)
+
+        lay.addWidget(self._label("aUEC VALUE (¤)", 9))
+        self.out_auec = GlowLabel("¤ 0", box, glow_enabled=True)
         self.out_auec.setAccessibleName("AUECOutput")
+        f = QFont()
+        f.setPointSize(14)
+        f.setBold(True)
+        self.out_auec.setFont(f)
+        self.out_auec.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.out_auec.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        )
+
         lay.addWidget(self.out_auec)
         parent.addWidget(box)
 
     def _add_actions(self, parent):
         row = QHBoxLayout()
-        row.setSpacing(12)
-        self.btn_copy = QPushButton("COPY REPORT")
-        self.btn_save = QPushButton("SAVE REPORT")
+        row.setSpacing(4)
+
+        self.btn_copy = QuantumButton("COPY REPORT")
+        self.btn_save = QuantumButton("SAVE REPORT")
         self.btn_copy.setToolTip("Copy a formatted report to the clipboard")
         self.btn_save.setToolTip("Save a formatted report to a file")
+
+        policy_btn = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.btn_copy.setSizePolicy(policy_btn)
+        self.btn_save.setSizePolicy(policy_btn)
+
         self.btn_copy.clicked.connect(self._copy_report)
         self.btn_save.clicked.connect(self._save_report_dialog)
-        row.addWidget(self.btn_copy)
-        row.addWidget(self.btn_save)
+        row.addWidget(self.btn_copy, 1)
+        row.addWidget(self.btn_save, 1)
         parent.addLayout(row)
 
     def _apply_styles(self):
-        css = (
-            "QMainWindow { background-color: #101216; }\n"
-            "QTabWidget::pane { border: 1px solid #00d9ff; }\n"
-            "QTabBar::tab { background: #0f1116; color: #8ea0b2; padding: 8px 24px;\n"
-            "  border: 1px solid #00d9ff; border-bottom: none; margin: 2px; }\n"
-            "QTabBar::tab:selected { background: #00d9ff; color: #0b0f14;\n"
-            "  font-weight: bold; }\n"
-            "QGroupBox { color: #8ea0b2; border: 1px solid #00d9ff; border-radius: 8px;\n"
-            "  margin-top: 8px; }\n"
-            "QGroupBox:title { subcontrol-origin: margin; subcontrol-position: top left;\n"
-            "  padding: 0 6px; }\n"
-            "QLineEdit { background: #1f2228; color: #e6e9ef; border: 1px solid #00d9ff;\n"
-            "  border-radius: 6px; padding: 8px 12px; font-size: 24px; }\n"
-            "QLineEdit[mode=auto] { border: 1px solid #00d9ff; }\n"
-            "QLineEdit[mode=manual] { border: 1px solid #ffbb66; }\n"
-            "QLabel { color: #e6e9ef; }\n"
-            "QPushButton { background: #23262c; color: #e6f7ff; border: 1px solid #00d9ff;\n"
-            "  border-radius: 8px; padding: 10px 18px; font-weight: bold; }\n"
-            "QPushButton:hover { background: #00a2cc; border-color: #00a2cc; }\n"
-            "QPushButton:pressed { background: #00d9ff; border-color: #00d9ff; }\n"
-        )
-        self.setStyleSheet(css)
+        """Apply the futuristic Star Citizen-inspired theme."""
+        self.setStyleSheet(get_main_stylesheet())
+
+    def _on_tab_changed(self, index):
+        """Handle tab change with smooth animation."""
+        if self._tab_animation:
+            try:
+                self._tab_animation.stop()
+            except RuntimeError:
+                # Animation already cleaned up
+                pass
+            self._tab_animation = None
+
+        # Clear any lingering effects to prevent visual stacking
+        for i in range(self.tabs.count()):
+            w = self.tabs.widget(i)
+            if w:
+                w.setGraphicsEffect(None)
+
+        # Get current tab widget
+        current_widget = self.tabs.widget(index)
+        if current_widget:
+            effect = QGraphicsOpacityEffect(current_widget)
+            effect.setOpacity(0.0)
+            current_widget.setGraphicsEffect(effect)
+
+            anim = QPropertyAnimation(effect, b"opacity", self)
+            anim.setDuration(ANIM_DURATION_NORMAL)
+            anim.setStartValue(0.0)
+            anim.setEndValue(1.0)
+            anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            def _cleanup():
+                current_widget.setGraphicsEffect(None)
+                self._tab_animation = None
+
+            anim.finished.connect(_cleanup)
+            anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+            self._tab_animation = anim
 
     def _refresh_styles(self):
         self.in_merits.style().unpolish(self.in_merits)
@@ -617,7 +1025,8 @@ class QtMeritCalcApp(QMainWindow):
         m = int("".join(filter(str.isdigit, self.in_minutes.text())) or "0")
         h = max(0, min(99, h))
         m = max(0, min(59, m))
-        merits = int(h * 3600 + m * 60)
+        rate_seconds = max(0.0001, float(self.seconds_per_merit))
+        merits = int((h * 3600 + m * 60) / rate_seconds)
         self._updating = True
         self.in_hours.setText(f"{h:02d}")
         self.in_minutes.setText(f"{m:02d}")
@@ -633,7 +1042,7 @@ class QtMeritCalcApp(QMainWindow):
         if txt == "":
             txt = "0"
         merits = int(txt)
-        total_seconds = int(merits * self.seconds_per_merit)
+        total_seconds = int(merits * max(0.0001, float(self.seconds_per_merit)))
         h = max(0, min(99, total_seconds // 3600))
         m = max(0, min(59, (total_seconds % 3600) // 60))
         self._updating = True
@@ -653,12 +1062,17 @@ class QtMeritCalcApp(QMainWindow):
         m = max(0, min(59, m))
         merits_text = "".join(filter(str.isdigit, self.in_merits.text())) or "0"
         merits_val = int(merits_text)
+        rate_seconds = max(0.0001, float(self.seconds_per_merit))
+        base_seconds = h * 3600 + m * 60
+        auto_merits = int(base_seconds / rate_seconds)
         if str(self.in_merits.property("mode")) == "auto":
-            merits = int(h * 3600 + m * 60)
+            merits = auto_merits
+            if merits_val and merits_val != auto_merits:
+                merits = merits_val
         else:
             merits = merits_val
-        auec_rate = self.settings.get("rate_merits_auec", 0.618)
-        fee_rate = self.settings.get("rate_fee_percent", 0.5)
+        auec_rate = float(self.settings.get("rate_merits_auec", 0.618) or 0.0)
+        fee_rate = float(self.settings.get("fee_percent", 0.5) or 0.0)
         auec_value = merits * auec_rate
         fee_amount = merits * (fee_rate / 100.0)
         merits_fee = merits + fee_amount
@@ -671,6 +1085,7 @@ class QtMeritCalcApp(QMainWindow):
         txt = self.out_merits_fee.text()
         val = txt.replace("☼", "").strip()
         pyperclip.copy(val)
+        self.show_toast("Merits Copied")
 
     def _copy_auec_val(self):
         if pyperclip is None:
@@ -678,6 +1093,7 @@ class QtMeritCalcApp(QMainWindow):
         txt = self.out_auec.text()
         val = txt.replace("¤", "").strip()
         pyperclip.copy(val)
+        self.show_toast("aUEC Value Copied")
 
     def _copy_report(self) -> None:
         if pyperclip is None:
@@ -689,6 +1105,7 @@ class QtMeritCalcApp(QMainWindow):
             f"AUEC Value: {self.out_auec.text()}\n"
         )
         pyperclip.copy(text)
+        self.show_toast("Report Copied to Clipboard")
 
     def _save_report_dialog(self):
         default_name = (
@@ -710,6 +1127,7 @@ class QtMeritCalcApp(QMainWindow):
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(text)
+            self.show_toast(f"Report Saved to {filepath.name}")
         except OSError as e:
             print(f"Error saving report: {e}")
 
@@ -772,83 +1190,196 @@ class QtMeritCalcApp(QMainWindow):
             app.quit()
 
     def _build_settings_tab(self, tab: QWidget):
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(12)
-        dsp_box = QGroupBox("DISPLAY")
-        dsp_lay = QGridLayout(dsp_box)
-        self.sld_dpi = QSlider(Qt.Orientation.Horizontal)
-        self.sld_dpi.setRange(50, 200)
-        self.sld_dpi.setValue(int(float(self.settings.get("ui_scale", 100))))
-        self.chk_auto_scale = QCheckBox("Auto scaling")
-        self.chk_auto_scale.setChecked(bool(self.settings.get("auto_scale_ui", True)))
-        self.spin_font = QDoubleSpinBox()
-        self.spin_font.setRange(8, 48)
-        self.spin_font.setValue(float(self.settings.get("font_size", 14)))
-        spin_bias = QDoubleSpinBox()
-        spin_bias.setRange(0.5, 1.5)
-        spin_bias.setSingleStep(0.01)
-        spin_bias.setValue(float(self.settings.get("auto_scale_bias", 0.80)))
-        dsp_lay.addWidget(QLabel("DPI scale (%)"), 0, 0)
-        dsp_lay.addWidget(self.sld_dpi, 0, 1)
-        dsp_lay.addWidget(self.chk_auto_scale, 1, 0)
-        dsp_lay.addWidget(QLabel("Base font size"), 2, 0)
-        dsp_lay.addWidget(self.spin_font, 2, 1)
-        dsp_lay.addWidget(QLabel("Auto scale bias"), 3, 0)
-        dsp_lay.addWidget(spin_bias, 3, 1)
-        layout.addWidget(dsp_box)
-        beh_box = QGroupBox("BEHAVIOR")
-        beh_lay = QGridLayout(beh_box)
-        self.chk_on_top = QCheckBox("Always on top")
-        self.chk_on_top.setChecked(bool(self.settings.get("always_on_top", False)))
-        self.chk_min_tray = QCheckBox("Minimize to tray")
-        self.chk_min_tray.setChecked(bool(self.settings.get("minimize_to_tray", False)))
-        beh_lay.addWidget(self.chk_on_top, 0, 0)
-        beh_lay.addWidget(self.chk_min_tray, 0, 1)
-        layout.addWidget(beh_box)
-        tran_box = QGroupBox("TRANSPARENCY")
-        tran_lay = QGridLayout(tran_box)
-        chk_trans_en = QCheckBox("Enable transparency")
+        """Futuristic settings layout tuned for readability and no overlap."""
+        outer = QVBoxLayout(tab)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
+        content = QWidget()
+        content.setObjectName("settings_scroll_content")
+        main = QVBoxLayout(content)
+        main.setContentsMargins(20, 20, 20, 20)
+        main.setSpacing(12)
+
+        # Helper for common spinbox styling
+        def create_spinbox(value, suffix=None):
+            sb = QDoubleSpinBox()
+            sb.setRange(0.0, 100.0)
+            sb.setSingleStep(0.1)
+            sb.setDecimals(2)
+            sb.setValue(value)
+            sb.setStyleSheet(
+                "QDoubleSpinBox {"
+                "  color: #e8f5ff;"
+                "  background: rgba(10, 20, 30, 0.55);"
+                "  font-weight: 600;"
+                "  selection-background-color: #00c2ff;"
+                "  selection-color: #061018;"
+                "  padding: 4px;"
+                "  border: 1px solid rgba(0, 200, 255, 0.3);"
+                "  border-radius: 4px;"
+                "}"
+                "QDoubleSpinBox:hover { border: 1px solid rgba(0, 200, 255, 0.6); }"
+                "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {"
+                "  background: rgba(0, 200, 255, 0.2);"
+                "  border: none;"
+                "  width: 16px;"
+                "}"
+                "QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {"
+                "  background: rgba(0, 200, 255, 0.4);"
+                "}"
+            )
+            sb.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            sb.setFixedWidth(120)
+            sb.setFixedHeight(30)
+            if suffix:
+                sb.setSuffix(f" {suffix}")
+            return sb
+
+        # --- Rates Section ---
+        rates_box = SciFiPanel("CALCULATION RATES")
+        rates_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        rates_layout = QVBoxLayout(rates_box)
+        rates_layout.setContentsMargins(12, 14, 12, 12)
+        rates_layout.setSpacing(10)
+
+        self.spin_rate = create_spinbox(
+            float(self.settings.get("rate_merits_seconds", 1.0))
+        )
+        self.spin_rate.setRange(0.1, 10.0)
+
+        self.spin_auec_pct = create_spinbox(
+            float(self.settings.get("rate_merits_auec", 0.618)) * 100.0, "%"
+        )
+        self.spin_fee = create_spinbox(
+            float(self.settings.get("fee_percent", 0.5)), "%"
+        )
+
+        def add_param_row(label_text, widget, tooltip=None):
+            row = QHBoxLayout()
+            lbl = QLabel(label_text)
+            lbl.setStyleSheet("color: #a0d0ff; font-weight: bold; font-size: 13px;")
+            if tooltip:
+                lbl.setToolTip(tooltip)
+                widget.setToolTip(tooltip)
+            row.addWidget(lbl)
+            row.addStretch()
+            row.addWidget(widget)
+            rates_layout.addLayout(row)
+
+        add_param_row(
+            "Prison Rate (sec/merit)", self.spin_rate, "Seconds reduced per merit"
+        )
+        add_param_row(
+            "aUEC Conversion Rate", self.spin_auec_pct, "Value of merits in aUEC (%)"
+        )
+        add_param_row(
+            "Transfer Fee", self.spin_fee, "In-game transfer fee deduction (%)"
+        )
+
+        main.addSpacing(8)
+        main.addWidget(rates_box)
+
+        # --- Visual Effects Section ---
+        trans_box = SciFiPanel("VISUAL EFFECTS")
+        trans_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        trans_layout = QVBoxLayout(trans_box)
+        trans_layout.setContentsMargins(12, 14, 12, 12)
+        trans_layout.setSpacing(10)
+
+        chk_trans_en = QCheckBox("Enable Transparency")
         chk_trans_en.setChecked(bool(self.settings.get("transparency_enabled", True)))
+        trans_layout.addWidget(chk_trans_en)
+
+        trans_row = QHBoxLayout()
+        trans_label = QLabel("Window Opacity")
+        trans_label.setStyleSheet("color: #a0d0ff; font-weight: bold; font-size: 13px;")
+
         self.sld_transparency = QSlider(Qt.Orientation.Horizontal)
-        self.sld_transparency.setRange(30, 100)  # Fixed range 0.3 to 1.0
+        self.sld_transparency.setRange(30, 100)
         self.sld_transparency.setValue(
             int(self.settings.get("window_transparency", 0.9) * 100)
         )
-        tran_lay.addWidget(chk_trans_en, 0, 0)
-        tran_lay.addWidget(self.sld_transparency, 0, 1)
-        layout.addWidget(tran_box)
-        rate_box = QGroupBox("RATES")
-        rate_lay = QGridLayout(rate_box)
-        self.spin_rate = QDoubleSpinBox()
-        self.spin_rate.setRange(0.1, 10.0)
-        self.spin_rate.setValue(float(self.settings.get("rate_merits_seconds", 1.0)))
-        self.spin_fee = QDoubleSpinBox()
-        self.spin_fee.setRange(0.0, 100.0)
-        self.spin_fee.setValue(float(self.settings.get("fee_percent", 0.5)))
-        spin_auec_pct = QDoubleSpinBox()
-        spin_auec_pct.setRange(0.0, 100.0)
-        spin_auec_pct.setSingleStep(0.1)
-        spin_auec_pct.setValue(
-            float(self.settings.get("rate_merits_auec", 0.618)) * 100.0
-        )
-        rate_lay.addWidget(QLabel("Prison rate (sec/merit)"), 0, 0)
-        rate_lay.addWidget(self.spin_rate, 0, 1)
-        rate_lay.addWidget(QLabel("aUEC conversion (%)"), 1, 0)
-        rate_lay.addWidget(spin_auec_pct, 1, 1)
-        rate_lay.addWidget(QLabel("Fee (%)"), 2, 0)
-        rate_lay.addWidget(self.spin_fee, 2, 1)
-        layout.addWidget(rate_box)
-        self.sld_dpi.sliderReleased.connect(
-            lambda: self._apply_dpi_scale(self.sld_dpi.value())
-        )
-        self.chk_auto_scale.toggled.connect(self._on_auto_toggled)
-        self.spin_font.valueChanged.connect(lambda v: self._apply_font_size(float(v)))
 
-        # Initialize widget state
-        is_auto = self.chk_auto_scale.isChecked()
-        self.sld_dpi.setEnabled(not is_auto)
-        self.spin_font.setEnabled(not is_auto)
+        self.lbl_opacity_value = QLabel(f"{self.sld_transparency.value()}%")
+        self.lbl_opacity_value.setFixedWidth(40)
+        self.lbl_opacity_value.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.lbl_opacity_value.setStyleSheet("color: #00d9ff; font-weight: bold;")
+
+        trans_row.addWidget(trans_label)
+        trans_row.addWidget(self.sld_transparency)
+        trans_row.addWidget(self.lbl_opacity_value)
+        trans_layout.addLayout(trans_row)
+
+        main.addSpacing(8)
+        main.addWidget(trans_box)
+
+        # --- Window Behavior Section ---
+        behavior_box = SciFiPanel("WINDOW BEHAVIOR")
+        behavior_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        behavior_layout = QVBoxLayout(behavior_box)
+        behavior_layout.setContentsMargins(12, 14, 12, 12)
+        behavior_layout.setSpacing(10)
+
+        self.chk_on_top = QCheckBox("Always on Top")
+        self.chk_on_top.setChecked(bool(self.settings.get("always_on_top", False)))
+        self.chk_min_tray = QCheckBox("Minimize to System Tray")
+        self.chk_min_tray.setChecked(bool(self.settings.get("minimize_to_tray", False)))
+
+        behavior_layout.addWidget(self.chk_on_top)
+        behavior_layout.addWidget(self.chk_min_tray)
+
+        main.addSpacing(8)
+        main.addWidget(behavior_box)
+
+        # --- Updates Section ---
+        updates_box = SciFiPanel("UPDATES & MAINTENANCE")
+        updates_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        updates_layout = QVBoxLayout(updates_box)
+        updates_layout.setContentsMargins(12, 14, 12, 12)
+        updates_layout.setSpacing(10)
+
+        self.chk_auto_update = QCheckBox("Check for updates on startup")
+        self.chk_auto_update.setChecked(
+            bool(self.settings.get("auto_check_updates", True))
+        )
+        self.chk_never_update = QCheckBox("Never check for updates")
+        self.chk_never_update.setChecked(bool(self.settings.get("never_update", False)))
+
+        updates_layout.addWidget(self.chk_auto_update)
+        updates_layout.addWidget(self.chk_never_update)
+
+        main.addSpacing(8)
+        main.addWidget(updates_box)
+        # Spread available vertical space across sections to avoid large blank areas
+        for idx in range(main.count()):
+            main.setStretch(idx, 1)
+
+        # --- Signal Connections ---
         self.chk_on_top.toggled.connect(
             lambda v: (
                 self.settings.set("always_on_top", bool(v)),
@@ -858,28 +1389,42 @@ class QtMeritCalcApp(QMainWindow):
         self.chk_min_tray.toggled.connect(
             lambda v: self.settings.set("minimize_to_tray", bool(v))
         )
+        self.chk_auto_update.toggled.connect(
+            lambda _: self._sync_update_checkboxes("auto")
+        )
+        self.chk_never_update.toggled.connect(
+            lambda v: (
+                self.settings.set("never_update", bool(v)),
+                self._sync_update_checkboxes("never"),
+            )
+        )
         chk_trans_en.toggled.connect(
             lambda v: self.settings.set("transparency_enabled", bool(v))
         )
-        self.sld_transparency.valueChanged.connect(
-            lambda v: self._apply_transparency(int(v))
-        )
-        spin_bias.valueChanged.connect(
-            lambda v: self.settings.set("auto_scale_bias", float(v))
-        )
+        self.sld_transparency.valueChanged.connect(self._on_opacity_changed)
         self.spin_rate.valueChanged.connect(self._on_rate_changed)
         self.spin_fee.valueChanged.connect(self._on_fee_changed)
-        spin_auec_pct.valueChanged.connect(
+        self.spin_auec_pct.valueChanged.connect(
             lambda v: self.settings.set("rate_merits_auec", float(v) / 100.0)
         )
-        self.tbl_keys = QTableWidget()
-        self.tbl_keys.setColumnCount(3)
-        self.tbl_keys.setHorizontalHeaderLabels(["Action", "Shortcut", ""])
-        hdr = self.tbl_keys.horizontalHeader()
-        if hdr is not None:
-            hdr.setStretchLastSection(True)
-        layout.addWidget(self.tbl_keys)
-        self._populate_keybinds()
+        # Initial sync for update checkboxes
+        self._sync_update_checkboxes(None)
+
+        scroll.setWidget(content)
+        # Match calculator tab background by letting the pane show through
+        scroll.setStyleSheet(
+            """
+            QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QWidget#settings_scroll_content {
+                background: transparent;
+            }
+            """
+        )
+        outer.addWidget(scroll)
+        self._settings_scroll = scroll
 
     def _apply_on_top(self, v: bool):
         f = self.windowFlags()
@@ -895,35 +1440,56 @@ class QtMeritCalcApp(QMainWindow):
         self.setWindowOpacity(op)
         self.settings.set("window_transparency", op)
 
+    def _on_opacity_changed(self, value: int):
+        self._apply_transparency(value)
+        if hasattr(self, "lbl_opacity_value") and self.lbl_opacity_value:
+            self.lbl_opacity_value.setText(f"{value}%")
+
     def _apply_opacity(self, v: int):
         self._apply_transparency(v)
 
-    def _apply_dpi_scale(self, val: int):
-        self.settings.set("ui_scale", float(val))
-        self._apply_font_size(self.spin_font.value())
+    def _sync_update_checkboxes(self, source: str | None = None):
+        """Ensure auto-update and never-update are mutually exclusive."""
+        if not hasattr(self, "chk_auto_update") or not hasattr(
+            self, "chk_never_update"
+        ):
+            return
+        if getattr(self, "_syncing_updates", False):
+            return
+        self._syncing_updates = True
 
-    def _apply_auto_scale(self):
-        bias = float(self.settings.get("auto_scale_bias", 0.80))
-        app = QApplication.instance() or QApplication([])
-        screen = app.primaryScreen()
-        dpi = 96.0
-        if screen is not None:
-            try:
-                dpi = float(screen.logicalDotsPerInch())
-            except Exception:
-                dpi = 96.0
-        # Reduce the impact of DPI scaling to keep UI compact
-        # Using a dampening factor of 0.75 on the DPI ratio
-        dpi_ratio = dpi / 96.0
-        dampened_ratio = 1.0 + (dpi_ratio - 1.0) * 0.75
-        scale = max(0.6, min(2.0, dampened_ratio * bias))
-        val = int(scale * 100)
-        if self.sld_dpi is not None:
-            self.sld_dpi.blockSignals(True)
-            self.sld_dpi.setValue(val)
-            self.sld_dpi.blockSignals(False)
-        self.settings.set("ui_scale", float(val))
-        self._apply_font_size(self.spin_font.value())
+        auto = self.chk_auto_update.isChecked()
+        never = self.chk_never_update.isChecked()
+
+        # Enforce exclusivity based on the source toggle
+        if source == "auto" and auto:
+            self.chk_never_update.setChecked(False)
+            never = False
+        if source == "never" and never:
+            self.chk_auto_update.setChecked(False)
+            auto = False
+
+        # Enable/disable counterparts
+        if auto:
+            self.chk_never_update.setEnabled(False)
+            self.chk_auto_update.setEnabled(True)
+        elif never:
+            self.chk_auto_update.setEnabled(False)
+            self.chk_never_update.setEnabled(True)
+        else:
+            # both unchecked -> both available
+            self.chk_auto_update.setEnabled(True)
+            self.chk_never_update.setEnabled(True)
+
+        # Persist settings
+        self.settings.set("auto_check_updates", bool(auto))
+        self.settings.set("never_update", bool(never))
+
+        self._syncing_updates = False
+
+    def _on_never_update_toggled(self, v: bool):
+        self.settings.set("never_update", bool(v))
+        self._sync_update_checkboxes("never")
 
     def changeEvent(self, e):
         if e.type() == QEvent.Type.WindowStateChange:
@@ -932,15 +1498,12 @@ class QtMeritCalcApp(QMainWindow):
                     self._hide_to_tray()
         super().changeEvent(e)
 
-    def _apply_font_size(self, size: float):
-        scale = float(self.settings.get("ui_scale", 100)) / 100.0
-        f = self.font()
-        f.setPointSize(int(size * scale))
-        self.setFont(f)
-
     def _on_rate_changed(self, v):
         try:
-            self.settings.set("rate_merits_seconds", float(v))
+            new_rate = float(v)
+            self.settings.set("rate_merits_seconds", new_rate)
+            self.seconds_per_merit = new_rate
+            self._calculate()
         except Exception:
             pass
 
@@ -953,18 +1516,6 @@ class QtMeritCalcApp(QMainWindow):
                 self._calculate()
         except Exception:
             pass
-
-    def _on_auto_toggled(self, v: bool):
-        self.settings.set("auto_scale_ui", bool(v))
-
-        # Update widget enabled state
-        if self.sld_dpi:
-            self.sld_dpi.setEnabled(not v)
-        if self.spin_font:
-            self.spin_font.setEnabled(not v)
-
-        if bool(v):
-            self._apply_auto_scale()
 
     def _clear_inputs(self):
         self.in_hours.setText("00")
@@ -1018,33 +1569,9 @@ class QtMeritCalcApp(QMainWindow):
                 sc.activated.connect(callback)
                 self._shortcuts.append(sc)
 
-        # Refresh table if it exists
-        if self.tbl_keys:
-            self._populate_keybinds()
-
     def _populate_keybinds(self) -> None:
-        self.tbl_keys.setRowCount(0)
-        shortcuts = self.settings.get("shortcuts", {}) or {}
-        defs = self._keybind_definitions()
-
-        # Sort by name for display
-        sorted_items = sorted(defs.items(), key=lambda x: x[1][0])
-
-        for key_id, (name, _) in sorted_items:
-            row = self.tbl_keys.rowCount()
-            self.tbl_keys.insertRow(row)
-            self.tbl_keys.setItem(row, 0, QTableWidgetItem(name))
-            self.tbl_keys.setItem(row, 1, QTableWidgetItem(shortcuts.get(key_id, "")))
-            edit_btn = QPushButton("Edit")
-            reset_btn = QPushButton("Reset")
-            cell = QWidget()
-            h = QHBoxLayout(cell)
-            h.setContentsMargins(0, 0, 0, 0)
-            h.addWidget(edit_btn)
-            h.addWidget(reset_btn)
-            self.tbl_keys.setCellWidget(row, 2, cell)
-            edit_btn.clicked.connect(lambda _, k=key_id: self._edit_keybind(k))
-            reset_btn.clicked.connect(lambda _, k=key_id: self._reset_keybind(k))
+        """Populate the shortcuts list with clean, organized rows."""
+        pass
 
     def _edit_keybind(self, key_id: str):
         defs = self._keybind_definitions()
@@ -1052,7 +1579,16 @@ class QtMeritCalcApp(QMainWindow):
 
         dlg = QDialog(self)
         dlg.setWindowTitle(f"Bind: {name}")
+        dlg.setStyleSheet(get_dialog_stylesheet())
         lay = QVBoxLayout(dlg)
+        lay.setSpacing(16)
+        lay.setContentsMargins(20, 20, 20, 20)
+
+        # Add label
+        lbl = QLabel(f"Press keys for: {name}")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(lbl)
+
         if HAVE_KEYSEQ:
             ks_edit = QKeySequenceEdit(dlg)
             lay.addWidget(ks_edit)
@@ -1086,35 +1622,90 @@ class QtMeritCalcApp(QMainWindow):
 
     def _build_about_tab(self, tab: QWidget):
         v = QVBoxLayout(tab)
-        v.setContentsMargins(8, 8, 8, 8)
-        v.setSpacing(12)
-        header = self._label("SC MERIT CALC", 18)
-        v.addWidget(header)
+        v.setContentsMargins(16, 16, 16, 16)
+        v.setSpacing(16)
+
+        about_box = SciFiPanel("ABOUT")
+        about_box.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        )
+        about_lay = QVBoxLayout(about_box)
+        about_lay.setContentsMargins(12, 16, 12, 12)
+        about_lay.setSpacing(12)
+
+        header = self._label("SC MERIT CALC", 12)
+        about_lay.addWidget(header)
+
         body = QLabel(
             "Merits calculator for Star Citizen. Calculates merits, fees and aUEC."
         )
         body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v.addWidget(body)
+        body.setWordWrap(True)
+        about_lay.addWidget(body)
+
         dev_body = QLabel("Developer: PINKgeekPDX • Development date: 2025-12-03")
         dev_body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v.addWidget(dev_body)
+        dev_body.setWordWrap(True)
+        dev_body.setStyleSheet("color: #a0d0ff;")
+        about_lay.addWidget(dev_body)
+
         img = QLabel()
-        img.setFixedSize(300, 300)
+        img.setFixedSize(150, 150)
         icon = get_app_icon()
-        pm = icon.pixmap(300, 300)
+        pm = icon.pixmap(150, 150)
         img.setPixmap(pm)
-        v.addWidget(img)
-        row = QHBoxLayout()
-        btn_repo = QPushButton("GitHub")
-        btn_issues = QPushButton("Issues")
-        btn_updates = QPushButton("Check for Updates")
+        img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_lay.addWidget(img, 0, Qt.AlignmentFlag.AlignCenter)
+
+        # Button row/column layout with non-bold text
+        btn_repo = QuantumButton("GitHub", tab)
+        btn_issues = QuantumButton("Issues", tab)
+        btn_updates = QuantumButton("Check for Updates", tab)
         btn_updates.setEnabled(False)
-        btn_license = QPushButton("Open Source License")
-        row.addWidget(btn_repo)
-        row.addWidget(btn_issues)
-        row.addWidget(btn_updates)
-        row.addWidget(btn_license)
-        v.addLayout(row)
+        btn_license = QuantumButton("Open Source License", tab)
+
+        # De-emphasize bold for these buttons
+        for btn in (btn_repo, btn_issues, btn_updates, btn_license):
+            f = btn.font()
+            f.setBold(False)
+            btn.setFont(f)
+
+        # Space below the image before buttons
+        about_lay.addSpacing(6)
+
+        # Group button rows and center them
+        buttons_col = QVBoxLayout()
+        buttons_col.setSpacing(8)
+
+        # First row: GitHub, Issues
+        row_top = QHBoxLayout()
+        row_top.setSpacing(10)
+        row_top.addStretch()
+        row_top.addWidget(btn_repo)
+        row_top.addWidget(btn_issues)
+        row_top.addStretch()
+        buttons_col.addLayout(row_top)
+
+        # Second row: Check for updates
+        row_mid = QHBoxLayout()
+        row_mid.setSpacing(10)
+        row_mid.addStretch()
+        row_mid.addWidget(btn_updates)
+        row_mid.addStretch()
+        buttons_col.addLayout(row_mid)
+
+        # Third row: License
+        row_bottom = QHBoxLayout()
+        row_bottom.setSpacing(10)
+        row_bottom.addStretch()
+        row_bottom.addWidget(btn_license)
+        row_bottom.addStretch()
+        buttons_col.addLayout(row_bottom)
+
+        about_lay.addLayout(buttons_col)
+
+        v.addWidget(about_box, 1)
+
         repo_url = "https://github.com/PINKgeekPDX/SCMeritsCalc"
         issues_url = "https://github.com/PINKgeekPDX/SCMeritsCalc/issues"
         btn_repo.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(repo_url)))
@@ -1126,7 +1717,10 @@ class QtMeritCalcApp(QMainWindow):
         def _show_license():
             dlg = QDialog(self)
             dlg.setWindowTitle("MIT License")
+            dlg.setStyleSheet(get_dialog_stylesheet())
             lay = QVBoxLayout(dlg)
+            lay.setSpacing(16)
+            lay.setContentsMargins(20, 20, 20, 20)
             txt = QLabel(
                 (
                     "Permission is hereby granted, free of charge, "
@@ -1165,13 +1759,15 @@ class QtMeritCalcApp(QMainWindow):
 
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setContentsMargins(12, 12, 12, 12)
-        scroll_layout.setSpacing(15)
+        scroll_layout.setContentsMargins(4, 4, 4, 4)
+        scroll_layout.setSpacing(4)
 
         # Calculator Section
-        calc_box = QGroupBox("CALCULATOR")
+        # Calculator Section
+        calc_box = SciFiPanel("CALCULATOR")
         calc_lay = QVBoxLayout(calc_box)
-        calc_lay.setSpacing(10)
+        calc_lay.setContentsMargins(12, 16, 12, 12)
+        calc_lay.setSpacing(8)
 
         calc_text = QLabel(
             "<b>Prison Sentence:</b><br>"
@@ -1194,9 +1790,11 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(calc_box)
 
         # Actions Section
-        actions_box = QGroupBox("ACTIONS")
+        # Actions Section
+        actions_box = SciFiPanel("ACTIONS")
         actions_lay = QVBoxLayout(actions_box)
-        actions_lay.setSpacing(10)
+        actions_lay.setContentsMargins(12, 16, 12, 12)
+        actions_lay.setSpacing(4)
 
         actions_text = QLabel(
             "<b>Copy Report:</b><br>"
@@ -1215,9 +1813,10 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(actions_box)
 
         # Keyboard Shortcuts Section
-        shortcuts_box = QGroupBox("KEYBOARD SHORTCUTS")
+        shortcuts_box = SciFiPanel("KEYBOARD SHORTCUTS")
         shortcuts_lay = QVBoxLayout(shortcuts_box)
-        shortcuts_lay.setSpacing(10)
+        shortcuts_lay.setContentsMargins(12, 16, 12, 12)
+        shortcuts_lay.setSpacing(8)
 
         shortcuts_text = QLabel(
             "<b>Copy Report:</b> Ctrl+C<br>"
@@ -1239,9 +1838,11 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(shortcuts_box)
 
         # Settings Section
-        settings_box = QGroupBox("SETTINGS")
+        # Settings Section
+        settings_box = SciFiPanel("SETTINGS")
         settings_lay = QVBoxLayout(settings_box)
-        settings_lay.setSpacing(10)
+        settings_lay.setContentsMargins(12, 16, 12, 12)
+        settings_lay.setSpacing(8)
 
         settings_text = QLabel(
             "<b>Display:</b><br>"
@@ -1277,9 +1878,10 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(settings_box)
 
         # System Tray Section
-        tray_box = QGroupBox("SYSTEM TRAY")
+        tray_box = SciFiPanel("SYSTEM TRAY")
         tray_lay = QVBoxLayout(tray_box)
-        tray_lay.setSpacing(10)
+        tray_lay.setContentsMargins(12, 16, 12, 12)
+        tray_lay.setSpacing(8)
 
         tray_text = QLabel(
             "The application runs in the system tray when minimized (if enabled). "
@@ -1297,9 +1899,10 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(tray_box)
 
         # Updates Section
-        updates_box = QGroupBox("UPDATES")
+        updates_box = SciFiPanel("UPDATES")
         updates_lay = QVBoxLayout(updates_box)
-        updates_lay.setSpacing(10)
+        updates_lay.setContentsMargins(12, 16, 12, 12)
+        updates_lay.setSpacing(8)
 
         updates_text = QLabel(
             "The application can automatically check for updates from GitHub "
@@ -1325,9 +1928,10 @@ class QtMeritCalcApp(QMainWindow):
         scroll_layout.addWidget(updates_box)
 
         # Tips Section
-        tips_box = QGroupBox("TIPS & TRICKS")
+        tips_box = SciFiPanel("TIPS & TRICKS")
         tips_lay = QVBoxLayout(tips_box)
-        tips_lay.setSpacing(10)
+        tips_lay.setContentsMargins(4, 10, 4, 4)
+        tips_lay.setSpacing(4)
 
         tips_text = QLabel(
             "• Double-click any output value (Merits with Fee or aUEC Value) "
@@ -1358,6 +1962,114 @@ class QtMeritCalcApp(QMainWindow):
         # Style the help content - match app theme
         # Don't override global styles, just ensure proper background
         scroll_content.setObjectName("scroll_content")
+        scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: #101216;
+                border: none;
+            }
+            QWidget#scroll_content {
+                background-color: #101216;
+            }
+            """
+        )
+
+    def _build_help_tab_v2(self, tab: QWidget):
+        v = QVBoxLayout(tab)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+
+        # Create scrollable area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        scroll_content = QWidget()
+        scroll_content.setObjectName("scroll_content")
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setContentsMargins(16, 16, 16, 16)
+        scroll_layout.setSpacing(16)
+
+        # Calculator Section
+        calc_box = SciFiPanel("CALCULATOR")
+        calc_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        calc_lay = QVBoxLayout(calc_box)
+        calc_lay.setContentsMargins(12, 16, 12, 12)
+        calc_lay.setSpacing(8)
+
+        calc_text = QLabel(
+            "<b>Prison Sentence:</b> Enter your time to auto-calculate merits.<br>"
+            "<b>Merits:</b> Manually enter merits to reverse-calculate time.<br>"
+            "<b>aUEC Value:</b> Shows the currency value of entered merits."
+        )
+        calc_text.setWordWrap(True)
+        calc_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        calc_lay.addWidget(calc_text)
+        scroll_layout.addWidget(calc_box)
+
+        # Actions Section
+        actions_box = SciFiPanel("ACTIONS")
+        actions_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        actions_lay = QVBoxLayout(actions_box)
+        actions_lay.setContentsMargins(12, 16, 12, 12)
+        actions_lay.setSpacing(8)
+
+        actions_text = QLabel(
+            "<b>Double-Click:</b> Copy any value ending in (☼) or (¤).<br>"
+            "<b>Copy Report:</b> Copies a full formatted report to clipboard.<br>"
+            "<b>Save Report:</b> Saves the report to a text file."
+        )
+        actions_text.setWordWrap(True)
+        actions_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        actions_lay.addWidget(actions_text)
+        scroll_layout.addWidget(actions_box)
+
+        # Keyboard Shortcuts Section
+        shortcuts_box = SciFiPanel("KEYBOARD SHORTCUTS")
+        shortcuts_box.setSizePolicy(
+            QSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+            )
+        )
+        shortcuts_lay = QVBoxLayout(shortcuts_box)
+        shortcuts_lay.setContentsMargins(12, 16, 12, 12)
+        shortcuts_lay.setSpacing(8)
+
+        shortcuts_text = QLabel(
+            "<b>Ctrl+C:</b> Copy Report &nbsp;&bull;&nbsp; "
+            "<b>Ctrl+S:</b> Save Report<br>"
+            "<b>Ctrl+R:</b> Clear Inputs &nbsp;&bull;&nbsp; "
+            "<b>Esc:</b> Minimize<br>"
+            "<b>Ctrl+Shift+T:</b> Toggle Transparency<br>"
+            "<b>Ctrl+Shift+A:</b> Toggle Always On Top<br>"
+            "<b>Ctrl+O:</b> Open Settings"
+        )
+        shortcuts_text.setWordWrap(True)
+        shortcuts_text.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        shortcuts_lay.addWidget(shortcuts_text)
+        scroll_layout.addWidget(shortcuts_box)
+
+        # Spread available space across the three panels to avoid large empty areas
+        for idx in range(scroll_layout.count()):
+            scroll_layout.setStretch(idx, 1)
+
+        scroll_area.setWidget(scroll_content)
+        v.addWidget(scroll_area)
+
+        # Style the scroll area to match app theme
         scroll_area.setStyleSheet(
             """
             QScrollArea {

@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from meritscalc.theme import (
+from .theme import (
     COLOR_BG_SECONDARY,
     COLOR_ACCENT_PRIMARY,
     COLOR_ACCENT_SECONDARY,

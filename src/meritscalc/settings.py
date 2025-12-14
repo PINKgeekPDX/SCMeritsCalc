@@ -14,13 +14,13 @@ def _user_documents_dir() -> Path:
 
 def _app_data_dir() -> Path:
     """Get the application data directory."""
-    d = _user_documents_dir() / "PINK" / "SCMeritCalc"
+    d = _user_documents_dir() / "PINK" / "SCMC"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 SETTINGS_FILE = str(_app_data_dir() / "settings.json")
-LOG_FILE = str(_app_data_dir() / "ScMeritCalc.log")
+LOG_FILE = str(_app_data_dir() / "SCMC.log")
 
 DEFAULT_SETTINGS = {
     # Core calculation settings

@@ -67,6 +67,7 @@ ANIM_DURATION_FAST = 150
 ANIM_DURATION_NORMAL = 300
 ANIM_DURATION_SLOW = 500
 
+
 # Get comprehensive stylesheet for the entire application
 def get_main_stylesheet() -> str:
     """Get the main application stylesheet with enhanced AAA holographic effects."""
@@ -76,7 +77,6 @@ def get_main_stylesheet() -> str:
         background-color: {COLOR_BG_PRIMARY};
         color: {COLOR_TEXT_PRIMARY};
     }}
-    
     /* Tab Widget */
     QTabWidget::pane {{
         border: 1px solid {COLOR_BORDER_SECONDARY};
@@ -85,7 +85,7 @@ def get_main_stylesheet() -> str:
             stop:0 {COLOR_BG_SECONDARY}, stop:1 {COLOR_BG_TERTIARY});
         padding: 4px;
     }}
-    
+
     QTabBar::tab {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_BG_TERTIARY}, stop:1 {COLOR_BG_SECONDARY});
@@ -100,21 +100,21 @@ def get_main_stylesheet() -> str:
         font-size: {FONT_SIZE_XS}pt;
         min-width: 60px;
     }}
-    
+
     QTabBar::tab:selected {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_PRIMARY}, stop:1 {COLOR_ACCENT_SECONDARY});
         color: {COLOR_BG_PRIMARY};
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     QTabBar::tab:hover:!selected {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_BG_PANEL}, stop:1 {COLOR_BG_TERTIARY});
         color: {COLOR_TEXT_PRIMARY};
         border-color: {COLOR_ACCENT_SECONDARY};
     }}
-    
+
     /* Group Boxes - Holographic Panels */
     QGroupBox {{
         color: {COLOR_TEXT_SECONDARY};
@@ -127,7 +127,7 @@ def get_main_stylesheet() -> str:
         font-weight: bold;
         font-size: {FONT_SIZE_XS}pt;
     }}
-    
+
     QGroupBox:title {{
         subcontrol-origin: margin;
         subcontrol-position: top left;
@@ -136,11 +136,11 @@ def get_main_stylesheet() -> str:
         background: transparent;
         border: none;
     }}
-    
+
     QGroupBox:hover {{
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     /* Line Edits - Holographic Input Fields */
     QLineEdit {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -154,49 +154,49 @@ def get_main_stylesheet() -> str:
         selection-background-color: {COLOR_ACCENT_SECONDARY};
         selection-color: {COLOR_BG_PRIMARY};
     }}
-    
+
     QLineEdit:focus {{
         border: 2px solid {COLOR_ACCENT_PRIMARY};
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 rgba(0, 217, 255, 0.1), stop:1 rgba(15, 20, 25, 0.95));
     }}
-    
+
     QLineEdit[mode="auto"] {{
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     QLineEdit[mode="manual"] {{
         border-color: {COLOR_ACCENT_GOLD};
     }}
-    
+
     QLineEdit:hover {{
         border-color: {COLOR_ACCENT_SECONDARY};
     }}
-    
+
     /* Labels */
     QLabel {{
         color: {COLOR_TEXT_PRIMARY};
         background: transparent;
     }}
-    
+
     QLabel[class="header"] {{
         color: {COLOR_ACCENT_PRIMARY};
         font-size: {FONT_SIZE_LG}pt;
         font-weight: bold;
     }}
-    
+
     QLabel[class="value"] {{
         color: {COLOR_TEXT_PRIMARY};
         font-size: {FONT_SIZE_XL}pt;
         font-weight: bold;
     }}
-    
+
     QLabel[class="output"] {{
         color: {COLOR_ACCENT_PRIMARY};
         font-size: 36pt;
         font-weight: bold;
     }}
-    
+
     /* Push Buttons - Glowing Sci-Fi Buttons */
     QPushButton {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -210,33 +210,33 @@ def get_main_stylesheet() -> str:
         min-width: 60px;
         min-height: 24px;
     }}
-    
+
     QPushButton:hover {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_SECONDARY}, stop:1 {COLOR_ACCENT_DARK});
         border-color: {COLOR_ACCENT_PRIMARY};
         color: {COLOR_BG_PRIMARY};
     }}
-    
+
     QPushButton:pressed {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_PRIMARY}, stop:1 {COLOR_ACCENT_SECONDARY});
         border-color: {COLOR_ACCENT_GLOW};
     }}
-    
+
     QPushButton:disabled {{
         background: {COLOR_BG_SECONDARY};
         color: {COLOR_TEXT_DISABLED};
         border-color: {COLOR_BORDER_DIM};
     }}
-    
+
     /* Checkboxes */
     QCheckBox {{
         color: {COLOR_TEXT_PRIMARY};
         spacing: 6px;
         font-size: {FONT_SIZE_SM}pt;
     }}
-    
+
     QCheckBox::indicator {{
         width: 16px;
         height: 16px;
@@ -244,22 +244,22 @@ def get_main_stylesheet() -> str:
         border-radius: 3px;
         background: {COLOR_BG_SECONDARY};
     }}
-    
+
     QCheckBox::indicator:hover {{
         border-color: {COLOR_ACCENT_SECONDARY};
         background: {COLOR_BG_PANEL};
     }}
-    
+
     QCheckBox::indicator:checked {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_PRIMARY}, stop:1 {COLOR_ACCENT_SECONDARY});
         border-color: {COLOR_ACCENT_PRIMARY};
         image: none;
     }}
-    
+
     QCheckBox::indicator:checked:hover {{
     }}
-    
+
     /* Sliders */
     QSlider::groove:horizontal {{
         border: 1px solid {COLOR_BORDER_SECONDARY};
@@ -267,7 +267,7 @@ def get_main_stylesheet() -> str:
         background: {COLOR_BG_SECONDARY};
         border-radius: 4px;
     }}
-    
+
     QSlider::handle:horizontal {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_PRIMARY}, stop:1 {COLOR_ACCENT_SECONDARY});
@@ -277,18 +277,18 @@ def get_main_stylesheet() -> str:
         margin: -6px 0;
         border-radius: 10px;
     }}
-    
+
     QSlider::handle:horizontal:hover {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_ACCENT_GLOW}, stop:1 {COLOR_ACCENT_PRIMARY});
     }}
-    
+
     QSlider::sub-page:horizontal {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
             stop:0 {COLOR_ACCENT_SECONDARY}, stop:1 {COLOR_ACCENT_PRIMARY});
         border-radius: 4px;
     }}
-    
+
     /* Spin Boxes */
     QDoubleSpinBox, QSpinBox {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -300,31 +300,31 @@ def get_main_stylesheet() -> str:
         font-size: {FONT_SIZE_MD}pt;
         selection-background-color: {COLOR_ACCENT_SECONDARY};
     }}
-    
+
     QDoubleSpinBox:focus, QSpinBox:focus {{
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     QDoubleSpinBox::up-button, QSpinBox::up-button {{
         background: {COLOR_BG_SECONDARY};
         border: 1px solid {COLOR_BORDER_SECONDARY};
         border-top-right-radius: 4px;
         width: 20px;
     }}
-    
+
     QDoubleSpinBox::down-button, QSpinBox::down-button {{
         background: {COLOR_BG_SECONDARY};
         border: 1px solid {COLOR_BORDER_SECONDARY};
         border-bottom-right-radius: 4px;
         width: 20px;
     }}
-    
+
     QDoubleSpinBox::up-button:hover, QSpinBox::up-button:hover,
     QDoubleSpinBox::down-button:hover, QSpinBox::down-button:hover {{
         background: {COLOR_ACCENT_SECONDARY};
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     /* Progress Bars */
     QProgressBar {{
         border: 2px solid {COLOR_BORDER_SECONDARY};
@@ -335,41 +335,41 @@ def get_main_stylesheet() -> str:
         font-weight: bold;
         height: 24px;
     }}
-    
+
     QProgressBar::chunk {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
             stop:0 {COLOR_ACCENT_SECONDARY}, stop:1 {COLOR_ACCENT_PRIMARY});
         border-radius: 4px;
     }}
-    
+
     /* Scroll Areas */
     QScrollArea {{
         border: 1px solid {COLOR_BORDER_SECONDARY};
         border-radius: 6px;
         background: {COLOR_BG_SECONDARY};
     }}
-    
+
     QScrollBar:vertical {{
         background: {COLOR_BG_SECONDARY};
         width: 12px;
         border: none;
         border-radius: 6px;
     }}
-    
+
     QScrollBar::handle:vertical {{
         background: {COLOR_BORDER_SECONDARY};
         min-height: 30px;
         border-radius: 6px;
     }}
-    
+
     QScrollBar::handle:vertical:hover {{
         background: {COLOR_ACCENT_SECONDARY};
     }}
-    
+
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
         height: 0px;
     }}
-    
+
     /* Table Widgets */
     QTableWidget {{
         background: {COLOR_BG_SECONDARY};
@@ -379,17 +379,17 @@ def get_main_stylesheet() -> str:
         gridline-color: {COLOR_BORDER_DIM};
         font-size: {FONT_SIZE_SM}pt;
     }}
-    
+
     QTableWidget::item {{
         padding: 6px;
         border: none;
     }}
-    
+
     QTableWidget::item:selected {{
         background: {COLOR_ACCENT_SECONDARY};
         color: {COLOR_BG_PRIMARY};
     }}
-    
+
     QHeaderView::section {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_BG_PANEL}, stop:1 {COLOR_BG_SECONDARY});
@@ -399,7 +399,7 @@ def get_main_stylesheet() -> str:
         font-weight: bold;
         font-size: {FONT_SIZE_SM}pt;
     }}
-    
+
     /* Text Edit */
     QTextEdit {{
         background: {COLOR_BG_SECONDARY};
@@ -410,17 +410,17 @@ def get_main_stylesheet() -> str:
         font-size: {FONT_SIZE_SM}pt;
         selection-background-color: {COLOR_ACCENT_SECONDARY};
     }}
-    
+
     QTextEdit:focus {{
         border-color: {COLOR_ACCENT_PRIMARY};
     }}
-    
+
     /* Dialog */
     QDialog {{
         background-color: {COLOR_BG_PRIMARY};
         color: {COLOR_TEXT_PRIMARY};
     }}
-    
+
     /* Dialog Button Box */
     QDialogButtonBox QPushButton {{
         min-width: 80px;
@@ -431,9 +431,12 @@ def get_main_stylesheet() -> str:
 
 def get_dialog_stylesheet() -> str:
     """Get stylesheet specifically for dialogs."""
-    return get_main_stylesheet() + f"""
+    return (
+        get_main_stylesheet()
+        + f"""
     QDialog {{
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
             stop:0 {COLOR_BG_SECONDARY}, stop:1 {COLOR_BG_PRIMARY});
     }}
     """
+    )

@@ -1,21 +1,22 @@
 import unittest
 import tempfile
-import os
-import json
 from pathlib import Path
 from unittest.mock import patch
 
-from src.meritscalc.settings import SettingsManager, DEFAULT_SETTINGS
+from src.meritscalc.settings import SettingsManager
+
 
 class TestSettingsManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
         self.settings_file = Path(self.temp_dir) / "settings.json"
-        
+
         # Patch the SETTINGS_FILE constant in the module
-        self.patcher = patch('src.meritscalc.settings.SETTINGS_FILE', str(self.settings_file))
+        self.patcher = patch(
+            "src.meritscalc.settings.SETTINGS_FILE", str(self.settings_file)
+        )
         self.patcher.start()
-        
+
         self.settings = SettingsManager()
 
     def tearDown(self):
@@ -38,16 +39,17 @@ class TestSettingsManager(unittest.TestCase):
 
     def test_persistence(self):
         self.settings.set("rate_merits_seconds", 2.0)
-        
+
         # Create a new instance, should load from file
         new_settings = SettingsManager()
         self.assertEqual(new_settings.get("rate_merits_seconds"), 2.0)
 
     def test_observer(self):
         observed = {}
+
         def observer(k, v):
             observed[k] = v
-        
+
         self.settings.add_observer(observer)
         self.settings.set("fee_percent", 1.0)
         self.assertEqual(observed.get("fee_percent"), 1.0)
@@ -60,7 +62,6 @@ class TestSettingsManager(unittest.TestCase):
         self.assertEqual(geo["width"], 300)
         self.assertEqual(geo["height"], 400)
 
+
 if __name__ == "__main__":
     unittest.main()
-
-

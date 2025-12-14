@@ -1,4 +1,4 @@
-"""MeritsCalc package."""
+"""SCMC package."""
 
 from .logic import MeritsCalculator
 from .settings import SettingsManager

@@ -1,6 +1,6 @@
 param(
   [string]$ISCC = "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe",
-  [string]$IssFile = "installer\\MeritsCalc.iss"
+  [string]$IssFile = "installer\\SCMC.iss"
 )
 
 Write-Host "==> Building Windows installer"

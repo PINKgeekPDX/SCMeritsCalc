@@ -11,9 +11,7 @@ class MeritsCalculator:
         total_seconds = merits * self.merits_to_seconds_rate
         return self._format_time(total_seconds)
 
-    def time_to_merits(
-        self, hours: float, minutes: float, seconds: float
-    ) -> float:
+    def time_to_merits(self, hours: float, minutes: float, seconds: float) -> float:
         total_seconds = (hours * 3600) + (minutes * 60) + seconds
         if self.merits_to_seconds_rate == 0:
             return 0
@@ -40,9 +38,7 @@ class MeritsCalculator:
         additional_charges: float,
         discount_percent: float,
     ) -> float:
-        subtotal = (
-            self.apply_fee(base_amount, fee_percent) + additional_charges
-        )
+        subtotal = self.apply_fee(base_amount, fee_percent) + additional_charges
         discount = subtotal * (max(0.0, discount_percent) / 100.0)
         return max(0.0, round(subtotal - discount, 2))
 

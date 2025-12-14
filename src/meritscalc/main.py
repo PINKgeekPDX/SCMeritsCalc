@@ -1,4 +1,4 @@
-"""MeritsCalc application entry point and utilities."""
+"""SCMC application entry point and utilities."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from meritscalc.logic import MeritsCalculator
-from meritscalc.qt_ui import create_qt_app
-from meritscalc.settings import LOG_FILE, SettingsManager
+from .logic import MeritsCalculator
+from .qt_ui import create_qt_app
+from .settings import LOG_FILE, SettingsManager
 
 
 def create_enhanced_icon():
@@ -75,9 +75,9 @@ def setup_logging():
 
 
 def main() -> None:
-    """Launch the MeritsCalc Qt application."""
+    """Launch the SCMC Qt application."""
     setup_logging()
-    logging.info("Starting MeritsCalc Enhanced")
+    logging.info("Starting SCMC (Star Citizen Merit Calculator)")
     settings = SettingsManager()
     logging.info("Settings manager initialized")
     calculator = MeritsCalculator()

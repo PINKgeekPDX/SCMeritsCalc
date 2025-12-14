@@ -1,7 +1,7 @@
 param(
   [string]$Python = ".\.venv\\Scripts\\python.exe",
   [string]$DistDir = "dist",
-  [string]$BuildName = "MeritsCalc"
+  [string]$BuildName = "SCMC"
 )
 
 Write-Host "==> Preparing virtual environment"

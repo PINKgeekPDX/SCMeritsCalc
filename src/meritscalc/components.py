@@ -4,9 +4,9 @@ import customtkinter as ctk
 from .logic import MeritsCalculator
 from .settings import SettingsManager
 from .theme import (
-    FONT_HEADER,
-    FONT_MAIN,
-    FONT_SMALL,
+    FONT_FAMILY_HEADER,
+    FONT_FAMILY_PRIMARY,
+    FONT_SIZE_SM,
     COLOR_WARNING,
     COLOR_ACCENT_PRIMARY,
 )
@@ -31,7 +31,7 @@ class CalculatorSection(ctk.CTkFrame):
         ctk.CTkLabel(
             time_frame,
             text="PRISON SENTENCE",
-            font=FONT_HEADER,
+            font=(FONT_FAMILY_HEADER, 14),
             text_color=COLOR_ACCENT_PRIMARY,
         ).pack(pady=5)
 
@@ -49,11 +49,11 @@ class CalculatorSection(ctk.CTkFrame):
         ctk.CTkLabel(
             self,
             text="MERITS",
-            font=FONT_HEADER,
+            font=(FONT_FAMILY_HEADER, 14),
             text_color=COLOR_ACCENT_PRIMARY,
         ).pack(pady=5)
         self.entry_merits = ctk.CTkEntry(
-            self, placeholder_text="0", font=FONT_MAIN
+            self, placeholder_text="0", font=(FONT_FAMILY_PRIMARY, 12)
         )
         self.entry_merits.pack(pady=5, padx=20, fill="x")
         self.entry_merits.bind("<KeyRelease>", self._merits_changed)
@@ -64,12 +64,12 @@ class CalculatorSection(ctk.CTkFrame):
         self.fee_header = ctk.CTkLabel(
             fee_box,
             text=f"MERITS WITH {self.settings.get('fee_percent', 0.5)}% FEE",
-            font=FONT_HEADER,
+            font=(FONT_FAMILY_HEADER, 14),
             text_color=COLOR_ACCENT_PRIMARY,
         )
         self.fee_header.pack(pady=5)
         self.entry_fee = ctk.CTkEntry(
-            fee_box, placeholder_text="0", font=FONT_MAIN
+            fee_box, placeholder_text="0", font=(FONT_FAMILY_PRIMARY, 12)
         )
         self.entry_fee.pack(pady=5, padx=20, fill="x")
 
@@ -79,10 +79,10 @@ class CalculatorSection(ctk.CTkFrame):
         ctk.CTkLabel(
             time_box,
             text="TOTAL SENTENCE TIME",
-            font=FONT_HEADER,
+            font=(FONT_FAMILY_HEADER, 14),
             text_color=COLOR_ACCENT_PRIMARY,
         ).pack(pady=5)
-        self.entry_time_str = ctk.CTkEntry(time_box, font=FONT_MAIN)
+        self.entry_time_str = ctk.CTkEntry(time_box, font=(FONT_FAMILY_PRIMARY, 12))
         self.entry_time_str.pack(pady=5, padx=20, fill="x")
 
         # aUEC value display
@@ -91,10 +91,10 @@ class CalculatorSection(ctk.CTkFrame):
         ctk.CTkLabel(
             auec_box,
             text="aUEC VALUE",
-            font=FONT_HEADER,
+            font=(FONT_FAMILY_HEADER, 14),
             text_color=COLOR_ACCENT_PRIMARY,
         ).pack(pady=5)
-        self.entry_auec = ctk.CTkEntry(auec_box, font=FONT_MAIN)
+        self.entry_auec = ctk.CTkEntry(auec_box, font=(FONT_FAMILY_PRIMARY, 12))
         self.entry_auec.pack(pady=5, padx=20, fill="x")
 
         self.entry_h.bind("<KeyRelease>", self._time_changed)
@@ -125,9 +125,7 @@ class CalculatorSection(ctk.CTkFrame):
         self._update_fee_label(merits)
         # update derived displays
         self.entry_time_str.delete(0, "end")
-        self.entry_time_str.insert(
-            0, f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
-        )
+        self.entry_time_str.insert(0, f"{int(h):02d}:{int(m):02d}:{int(s):02d}")
         auec_val = self.calc.merits_to_auec(merits)
         self.entry_auec.delete(0, "end")
         self.entry_auec.insert(0, f"{auec_val:,.2f}")
@@ -183,28 +181,28 @@ class FeeSection(ctk.CTkFrame):
         self.calc = calc
         self.get_base_merits = get_base_merits
 
-        ctk.CTkLabel(self, text="FEES", font=FONT_HEADER).pack(pady=5)
+        ctk.CTkLabel(self, text="FEES", font=(FONT_FAMILY_HEADER, 14)).pack(pady=5)
 
         grid = ctk.CTkFrame(self)
         grid.pack(pady=6, padx=10, fill="x")
 
-        ctk.CTkLabel(grid, text="Base", font=FONT_SMALL).grid(
+        ctk.CTkLabel(grid, text="Base", font=(FONT_FAMILY_PRIMARY, FONT_SIZE_SM)).grid(
             row=0, column=0, sticky="w"
         )
         self.base_var = tk.DoubleVar(value=0.0)
         self.entry_base = ctk.CTkEntry(grid)
         self.entry_base.grid(row=0, column=1, sticky="we")
 
-        ctk.CTkLabel(grid, text="Additional", font=FONT_SMALL).grid(
-            row=1, column=0, sticky="w"
-        )
+        ctk.CTkLabel(
+            grid, text="Additional", font=(FONT_FAMILY_PRIMARY, FONT_SIZE_SM)
+        ).grid(row=1, column=0, sticky="w")
         self.add_var = tk.DoubleVar(value=0.0)
         self.entry_add = ctk.CTkEntry(grid)
         self.entry_add.grid(row=1, column=1, sticky="we")
 
-        ctk.CTkLabel(grid, text="Discount %", font=FONT_SMALL).grid(
-            row=2, column=0, sticky="w"
-        )
+        ctk.CTkLabel(
+            grid, text="Discount %", font=(FONT_FAMILY_PRIMARY, FONT_SIZE_SM)
+        ).grid(row=2, column=0, sticky="w")
         self.discount_var = tk.DoubleVar(
             value=float(self.settings.get("discount_percent", 0.0))
         )
@@ -213,14 +211,14 @@ class FeeSection(ctk.CTkFrame):
 
         grid.grid_columnconfigure(1, weight=1)
 
-        self.total_label = ctk.CTkLabel(self, text="Total: 0", font=FONT_MAIN)
+        self.total_label = ctk.CTkLabel(
+            self, text="Total: 0", font=(FONT_FAMILY_PRIMARY, 12)
+        )
         self.total_label.pack(pady=10)
 
         btns = ctk.CTkFrame(self)
         btns.pack(pady=6, fill="x")
-        apply_btn = ctk.CTkButton(
-            btns, text="APPLY", command=self._recalc_total
-        )
+        apply_btn = ctk.CTkButton(btns, text="APPLY", command=self._recalc_total)
         reset_btn = ctk.CTkButton(
             btns,
             text="RESET",
@@ -272,13 +270,13 @@ class SummarySection(ctk.CTkFrame):
 
         m_box = ctk.CTkFrame(self)
         m_box.pack(pady=8, padx=10, fill="x")
-        ctk.CTkLabel(m_box, text="MERITS", font=FONT_HEADER).pack(pady=5)
+        ctk.CTkLabel(m_box, text="MERITS", font=(FONT_FAMILY_HEADER, 14)).pack(pady=5)
         self.entry_summary_merits = ctk.CTkEntry(m_box)
         self.entry_summary_merits.pack(pady=5, padx=20, fill="x")
 
         t_box = ctk.CTkFrame(self, fg_color="#2e7d32")
         t_box.pack(pady=8, padx=10, fill="x")
-        ctk.CTkLabel(t_box, text="TIME", font=FONT_HEADER).pack(pady=5)
+        ctk.CTkLabel(t_box, text="TIME", font=(FONT_FAMILY_HEADER, 14)).pack(pady=5)
         self.entry_summary_time = ctk.CTkEntry(t_box)
         self.entry_summary_time.pack(pady=5, padx=20, fill="x")
 
@@ -287,9 +285,7 @@ class SummarySection(ctk.CTkFrame):
         self.entry_summary_merits.delete(0, "end")
         self.entry_summary_merits.insert(0, f"{merits_value:.0f}")
         self.entry_summary_time.delete(0, "end")
-        self.entry_summary_time.insert(
-            0, f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
-        )
+        self.entry_summary_time.insert(0, f"{int(h):02d}:{int(m):02d}:{int(s):02d}")
 
 
 class SettingsSection(ctk.CTkFrame):
@@ -298,7 +294,7 @@ class SettingsSection(ctk.CTkFrame):
         self.settings = settings
         self.on_apply = on_apply
 
-        ctk.CTkLabel(self, text="CONVERSION RATES", font=FONT_HEADER).pack(
+        ctk.CTkLabel(self, text="CONVERSION RATES", font=(FONT_FAMILY_HEADER, 14)).pack(
             pady=5
         )
 
@@ -307,18 +303,14 @@ class SettingsSection(ctk.CTkFrame):
         ctk.CTkLabel(row1, text="1 Merit = X Seconds:").pack(side="left")
         self.set_rate_seconds = ctk.CTkEntry(row1, width=80)
         self.set_rate_seconds.pack(side="right")
-        self.set_rate_seconds.insert(
-            0, str(self.settings.get("rate_merits_seconds"))
-        )
+        self.set_rate_seconds.insert(0, str(self.settings.get("rate_merits_seconds")))
 
         row2 = ctk.CTkFrame(self)
         row2.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(row2, text="1 Merit = X aUEC:").pack(side="left")
         self.set_rate_auec = ctk.CTkEntry(row2, width=80)
         self.set_rate_auec.pack(side="right")
-        self.set_rate_auec.insert(
-            0, str(self.settings.get("rate_merits_auec"))
-        )
+        self.set_rate_auec.insert(0, str(self.settings.get("rate_merits_auec")))
 
         row3 = ctk.CTkFrame(self)
         row3.pack(fill="x", padx=10, pady=5)
@@ -338,11 +330,11 @@ class SettingsSection(ctk.CTkFrame):
 
         prefs = ctk.CTkFrame(self)
         prefs.pack(pady=10, padx=10, fill="x")
-        ctk.CTkLabel(prefs, text="PREFERENCES", font=FONT_HEADER).pack(pady=5)
-
-        self.var_tray = tk.BooleanVar(
-            value=self.settings.get("minimize_to_tray")
+        ctk.CTkLabel(prefs, text="PREFERENCES", font=(FONT_FAMILY_HEADER, 14)).pack(
+            pady=5
         )
+
+        self.var_tray = tk.BooleanVar(value=self.settings.get("minimize_to_tray"))
         ctk.CTkCheckBox(
             prefs,
             text="Minimize to Tray",
@@ -358,9 +350,7 @@ class SettingsSection(ctk.CTkFrame):
             command=self._apply,
         ).pack(pady=5, padx=20, anchor="w")
 
-        ctk.CTkButton(self, text="APPLY RATES", command=self._apply).pack(
-            pady=10
-        )
+        ctk.CTkButton(self, text="APPLY RATES", command=self._apply).pack(pady=10)
         ctk.CTkButton(
             self,
             text="RESET DEFAULTS",
@@ -392,13 +382,9 @@ class SettingsSection(ctk.CTkFrame):
     def _reset_defaults(self):
         self.settings.reset_defaults()
         self.set_rate_seconds.delete(0, "end")
-        self.set_rate_seconds.insert(
-            0, str(self.settings.get("rate_merits_seconds"))
-        )
+        self.set_rate_seconds.insert(0, str(self.settings.get("rate_merits_seconds")))
         self.set_rate_auec.delete(0, "end")
-        self.set_rate_auec.insert(
-            0, str(self.settings.get("rate_merits_auec"))
-        )
+        self.set_rate_auec.insert(0, str(self.settings.get("rate_merits_auec")))
         self.set_fee_percent.delete(0, "end")
         self.set_fee_percent.insert(0, str(self.settings.get("fee_percent")))
         self.set_discount_percent.delete(0, "end")

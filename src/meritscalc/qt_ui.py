@@ -1,4 +1,4 @@
-"""MeritsCalc Qt UI module."""
+"""SCMC Qt UI module."""
 
 from __future__ import annotations
 
@@ -52,14 +52,14 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect,
 )
 
-from meritscalc.updater import UpdateManager
-from meritscalc.settings import _app_data_dir
-from meritscalc.theme import (
+from .updater import UpdateManager
+from .settings import _app_data_dir
+from .theme import (
     get_main_stylesheet,
     get_dialog_stylesheet,
     ANIM_DURATION_NORMAL,
 )
-from meritscalc.widgets import (
+from .widgets import (
     HoloInput,
     SciFiPanel,
     GlowLabel,
@@ -159,7 +159,7 @@ class UpdateDialog(QDialog):
         super().__init__(parent)
         self.settings = settings
         self.setWindowTitle("Check for Updates")
-        self.setFixedSize(500, 350)
+        self.setFixedSize(340, 200)
         self.manager = UpdateManager()
         self.worker = None
         self.installer_path = None
@@ -171,46 +171,63 @@ class UpdateDialog(QDialog):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(20)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(3)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        # Status panel using SciFiPanel for consistency
+        status_panel = SciFiPanel("UPDATE STATUS")
+        status_layout = QVBoxLayout(status_panel)
+        status_layout.setContentsMargins(6, 8, 6, 6)
+        status_layout.setSpacing(2)
 
         # Status Header with glow effect
         self.lbl_status_header = GlowLabel(
-            "Checking for Updates...", self, glow_enabled=True
+            "Checking for Updates...", status_panel, glow_enabled=True
         )
         f = QFont()
-        f.setPointSize(16)
+        f.setPointSize(10)
         f.setBold(True)
         self.lbl_status_header.setFont(f)
         self.lbl_status_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.lbl_status_header)
+        status_layout.addWidget(self.lbl_status_header)
 
         # Animated Progress Bar
-        self.progress_bar = AnimatedProgressBar(self)
+        self.progress_bar = AnimatedProgressBar(status_panel)
         self.progress_bar.setRange(0, 0)  # Indeterminate initially
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setFixedHeight(28)
-        layout.addWidget(self.progress_bar)
+        self.progress_bar.setFixedHeight(18)
+        status_layout.addWidget(self.progress_bar)
 
         # Status Text
         self.lbl_status = QLabel("Connecting to release server...")
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.lbl_status)
+        self.lbl_status.setStyleSheet("color: #a0d0ff; font-size: 9pt;")
+        status_layout.addWidget(self.lbl_status)
 
-        # Error Box (Hidden)
+        layout.addWidget(status_panel)
+
+        # Error Box (Hidden) - wrapped in SciFiPanel
+        error_panel = SciFiPanel("ERROR")
+        error_layout = QVBoxLayout(error_panel)
+        error_layout.setContentsMargins(6, 8, 6, 6)
         self.txt_error = QTextEdit()
         self.txt_error.setReadOnly(True)
         self.txt_error.setVisible(False)
-        layout.addWidget(self.txt_error)
+        self.txt_error.setFixedHeight(60)
+        error_layout.addWidget(self.txt_error)
+        error_panel.setVisible(False)
+        self._error_panel = error_panel
+        layout.addWidget(error_panel)
 
         # Buttons with glow effects
         self.btn_box = QHBoxLayout()
+        self.btn_box.setSpacing(3)
         self.btn_download = QuantumButton("Download", self)
-        self.btn_install = QuantumButton("Download and Update", self)
+        self.btn_install = QuantumButton("Download & Update", self)
         self.btn_close = QuantumButton("Cancel", self)
 
         for btn in (self.btn_download, self.btn_install, self.btn_close):
-            btn.setMinimumHeight(28)
+            btn.setMinimumHeight(26)
             btn.setSizePolicy(self._btn_policy)
 
         self.btn_download.setVisible(False)
@@ -222,11 +239,9 @@ class UpdateDialog(QDialog):
         self.btn_install.clicked.connect(lambda: self._start_download(install_now=True))
         self.btn_close.clicked.connect(self.close)
 
-        self.btn_box.addStretch()
         self.btn_box.addWidget(self.btn_download)
         self.btn_box.addWidget(self.btn_install)
         self.btn_box.addWidget(self.btn_close)
-        self.btn_box.addStretch()
         layout.addLayout(self.btn_box)
 
         # Apply futuristic theme
@@ -243,6 +258,8 @@ class UpdateDialog(QDialog):
         self.lbl_status_header.setText("Downloading Update...")
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(True)
+        self._error_panel.setVisible(False)
         self.btn_download.setVisible(False)
         self.btn_install.setVisible(False)
         self.btn_close.setText("Cancel")
@@ -260,6 +277,7 @@ class UpdateDialog(QDialog):
 
     def _on_progress(self, pct, status):
         self.lbl_status.setText(status)
+        self.lbl_status.setStyleSheet("color: #a0d0ff; font-size: 9pt;")
         if self.worker and self.worker.mode == "download":
             self.progress_bar.setValue(int(pct))
 
@@ -271,23 +289,23 @@ class UpdateDialog(QDialog):
         if available:
             self.lbl_status_header.setText(f"Update Available: v{version_str}")
             self.lbl_status.setText("A new version is available!")
+            self.lbl_status.setStyleSheet("color: #20ff80; font-size: 10pt;")
             self.btn_download.setVisible(True)
             self.btn_install.setVisible(True)
             self.btn_close.setText("Close")
         else:
-            from meritscalc.version import __version__
+            from .version import __version__
 
-            self.lbl_status_header.setText("SC Merits Calc is up to date")
-            self.lbl_status_header.setStyleSheet("color: #00ff00;")
-            self.lbl_status.setStyleSheet("color: #00ff00;")
-            self.lbl_status.setText(
-                f"Current version: {__version__} | Newest Version: {version_str}"
-            )
+            self.lbl_status_header.setText("SCMC is up to date")
+            self.lbl_status_header.setStyleSheet("color: #20ff80;")
+            self.lbl_status.setStyleSheet("color: #20ff80; font-size: 9pt;")
+            self.lbl_status.setText(f"Current: {__version__} | Latest: {version_str}")
             self.btn_close.setText("Close")
 
     def _on_download_finished(self, path, install_now):
         self.installer_path = path
         self.lbl_status.setText("Download Complete!")
+        self.lbl_status.setStyleSheet("color: #20ff80; font-size: 9pt;")
 
         if install_now:
             self.lbl_status_header.setText("Installing...")
@@ -302,7 +320,7 @@ class UpdateDialog(QDialog):
                 self.settings.set("pending_update_path", str(path))
             self.lbl_status_header.setText("Ready to Install")
             self.lbl_status.setText(
-                "Update downloaded. You will be prompted next time you run the app."
+                "Update downloaded. Will install on next app start."
             )
             self.btn_close.setText("Close")
 
@@ -310,6 +328,7 @@ class UpdateDialog(QDialog):
         self.lbl_status_header.setText("Error Occurred")
         self.lbl_status.setText("An error occurred during the operation.")
         self.progress_bar.setVisible(False)
+        self._error_panel.setVisible(True)
         self.txt_error.setVisible(True)
         self.txt_error.setText(msg)
         self.btn_close.setText("Close")
@@ -340,64 +359,92 @@ class UpdateFoundDialog(QDialog):
         )
 
         self.setWindowTitle("Update Available")
-        self.setFixedSize(540, 360)
+        self.setFixedSize(360, 280)
         self._init_ui()
         self.setStyleSheet(get_dialog_stylesheet())
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(14)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(3)
+        layout.setContentsMargins(8, 8, 8, 8)
 
-        header = GlowLabel(
-            f"Update Found: v{self.version_str}", self, glow_enabled=True
-        )
+        # Header panel
+        header_panel = SciFiPanel("UPDATE FOUND")
+        header_layout = QVBoxLayout(header_panel)
+        header_layout.setContentsMargins(6, 8, 6, 6)
+        header_layout.setSpacing(2)
+
+        header = GlowLabel(f"v{self.version_str}", header_panel, glow_enabled=True)
         f = QFont()
-        f.setPointSize(15)
+        f.setPointSize(11)
         f.setBold(True)
         header.setFont(f)
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(header)
+        header_layout.addWidget(header)
 
-        # Meta details
+        layout.addWidget(header_panel)
+
+        # Meta details - more compact
         try:
-            _, size_bytes, name = self.manager.get_installer_meta()
+            _, size_bytes, _ = self.manager.get_installer_meta()
         except Exception:
-            _, size_bytes, name = ("", None, "")
+            _, size_bytes = (None, None)
 
         size_str = "Unknown"
         if isinstance(size_bytes, int) and size_bytes > 0:
             size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
 
-        meta_box = SciFiPanel("UPDATE DETAILS")
+        meta_box = SciFiPanel("DETAILS")
         meta_layout = QVBoxLayout(meta_box)
-        meta_layout.setContentsMargins(6, 10, 6, 6)
-        meta_layout.setSpacing(4)
-        meta_layout.addWidget(QLabel(f"Version: {self.version_str}"))
-        meta_layout.addWidget(QLabel(f"Installer: {name or 'Not available'}"))
-        meta_layout.addWidget(QLabel(f"Size: {size_str}"))
+        meta_layout.setContentsMargins(6, 8, 6, 6)
+        meta_layout.setSpacing(2)
+
+        version_lbl = QLabel(f"Version: {self.version_str}")
+        version_lbl.setStyleSheet("color: #a0d0ff; font-size: 9pt;")
+        meta_layout.addWidget(version_lbl)
+
+        size_lbl = QLabel(f"Size: {size_str}")
+        size_lbl.setStyleSheet("color: #a0d0ff; font-size: 9pt;")
+        meta_layout.addWidget(size_lbl)
+
         self.lbl_status = QLabel("Select an option below.")
+        self.lbl_status.setStyleSheet(
+            "color: #a0d0ff; font-size: 8pt; font-style: italic;"
+        )
         meta_layout.addWidget(self.lbl_status)
         layout.addWidget(meta_box)
 
-        # Notes (truncated)
+        # Notes - more compact with scroll if needed
         notes_box = SciFiPanel("RELEASE NOTES")
         notes_layout = QVBoxLayout(notes_box)
-        notes_layout.setContentsMargins(6, 10, 6, 6)
-        notes_layout.setSpacing(4)
+        notes_layout.setContentsMargins(6, 8, 6, 6)
+        notes_layout.setSpacing(2)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setFixedHeight(60)
+        scroll_area.setStyleSheet(
+            "QScrollArea { border: none; background: transparent; }"
+        )
+
         notes_label = QLabel(self.notes.strip())
         notes_label.setWordWrap(True)
-        notes_layout.addWidget(notes_label)
+        notes_label.setStyleSheet("color: #b8d4ff; font-size: 8pt; padding: 2px;")
+        notes_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        scroll_area.setWidget(notes_label)
+        notes_layout.addWidget(scroll_area)
         layout.addWidget(notes_box)
 
-        # Buttons
+        # Buttons - more compact
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
-        self.btn_now = QuantumButton("Download & Update", self)
-        self.btn_later = QuantumButton("Download & Update Next Exit", self)
-        self.btn_ignore = QuantumButton("Ignore Update", self)
+        btn_row.setSpacing(3)
+        self.btn_now = QuantumButton("Update Now", self)
+        self.btn_later = QuantumButton("Update Later", self)
+        self.btn_ignore = QuantumButton("Ignore", self)
         for b in (self.btn_now, self.btn_later, self.btn_ignore):
-            b.setMinimumHeight(28)
+            b.setMinimumHeight(26)
             b.setSizePolicy(self._btn_policy)
         self.btn_now.clicked.connect(
             lambda: self._start_download(install_now=True, next_exit=False)
@@ -411,12 +458,13 @@ class UpdateFoundDialog(QDialog):
         btn_row.addWidget(self.btn_ignore)
         layout.addLayout(btn_row)
 
-        # Never update toggle
+        # Never update toggle - more compact
         toggle_row = QHBoxLayout()
-        toggle_row.setSpacing(6)
+        toggle_row.setSpacing(3)
         toggle_row.addStretch()
         self.chk_never = QCheckBox("Never Update")
         self.chk_never.setChecked(bool(self.settings.get("never_update", False)))
+        self.chk_never.setStyleSheet("color: #a0d0ff; font-size: 8pt;")
         self.chk_never.toggled.connect(
             lambda v: self.settings.set("never_update", bool(v))
         )
@@ -432,10 +480,18 @@ class UpdateFoundDialog(QDialog):
             return
         self._set_busy(True)
         self.lbl_status.setText("Downloading update...")
+        self.lbl_status.setStyleSheet(
+            "color: #a0d0ff; font-size: 9pt; font-style: italic;"
+        )
         dl_dir = _app_data_dir() / "updates"
         self.worker = UpdateWorker(self.manager, "download", dl_dir)
         self.worker.progress.connect(
-            lambda pct, status: self.lbl_status.setText(status)
+            lambda pct, status: (
+                self.lbl_status.setText(status),
+                self.lbl_status.setStyleSheet(
+                    "color: #a0d0ff; font-size: 9pt; font-style: italic;"
+                ),
+            )
         )
         self.worker.error.connect(self._on_error)
         self.worker.finished.connect(
@@ -448,12 +504,16 @@ class UpdateFoundDialog(QDialog):
         if next_exit:
             if self.settings:
                 self.settings.set("pending_update_path", str(path))
-            self.lbl_status.setText("Update downloaded. It will install on next exit.")
+            self.lbl_status.setText("Update downloaded. Will install on next exit.")
+            self.lbl_status.setStyleSheet("color: #20ff80; font-size: 9pt;")
             self._set_busy(False)
             return
         if install_now:
             try:
                 self.lbl_status.setText("Launching installer...")
+                self.lbl_status.setStyleSheet(
+                    "color: #a0d0ff; font-size: 9pt; font-style: italic;"
+                )
                 self.manager.run_installer(path)
                 app = QApplication.instance()
                 if app is not None:
@@ -463,6 +523,7 @@ class UpdateFoundDialog(QDialog):
 
     def _on_error(self, msg: str):
         self.lbl_status.setText(f"Error: {msg}")
+        self.lbl_status.setStyleSheet("color: #ff4444; font-size: 9pt;")
         self._set_busy(False)
 
 
@@ -498,7 +559,7 @@ class QtMeritCalcApp(QMainWindow):
         self._startup_anim = None
         self._startup_effect = None
         self._auto_update_worker = None
-        self.setWindowTitle("SC MERIT CALC")
+        self.setWindowTitle("SCMC")
         # Initialize tab animation
         self._tab_animation = None
         self._dpi_scale_factor = self._compute_dpi_scale()
@@ -640,28 +701,43 @@ class QtMeritCalcApp(QMainWindow):
         if pending and Path(pending).exists():
             dlg = QDialog(self)
             dlg.setWindowTitle("Update Ready")
-            dlg.setFixedSize(400, 200)
+            dlg.setFixedSize(300, 140)
 
             layout = QVBoxLayout(dlg)
-            layout.setSpacing(15)
-            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(4)
+            layout.setContentsMargins(8, 8, 8, 8)
+
+            # Status panel
+            status_panel = SciFiPanel("UPDATE READY")
+            status_layout = QVBoxLayout(status_panel)
+            status_layout.setContentsMargins(6, 8, 6, 6)
+            status_layout.setSpacing(3)
 
             lbl = QLabel(
                 "An update has been downloaded.\nWould you like to install it now?"
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            f = QFont()
-            f.setPointSize(12)
-            lbl.setFont(f)
-            layout.addWidget(lbl)
+            lbl.setStyleSheet("color: #a0d0ff; font-size: 9pt;")
+            lbl.setWordWrap(True)
+            status_layout.addWidget(lbl)
+            layout.addWidget(status_panel)
 
-            btns = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No
-            )
-            layout.addWidget(btns)
+            # Buttons
+            btn_row = QHBoxLayout()
+            btn_row.setSpacing(3)
+            btn_yes = QuantumButton("Yes", dlg)
+            btn_no = QuantumButton("No", dlg)
+            for btn in (btn_yes, btn_no):
+                btn.setMinimumHeight(26)
+                btn.setSizePolicy(
+                    QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                )
+            btn_row.addWidget(btn_yes)
+            btn_row.addWidget(btn_no)
+            layout.addLayout(btn_row)
 
-            btns.accepted.connect(dlg.accept)
-            btns.rejected.connect(dlg.reject)
+            btn_yes.clicked.connect(dlg.accept)
+            btn_no.clicked.connect(dlg.reject)
 
             # Apply futuristic theme
             dlg.setStyleSheet(get_dialog_stylesheet())
@@ -1108,9 +1184,7 @@ class QtMeritCalcApp(QMainWindow):
         self.show_toast("Report Copied to Clipboard")
 
     def _save_report_dialog(self):
-        default_name = (
-            f"MeritsCalc_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        )
+        default_name = f"SCMC_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         path, _ = QFileDialog.getSaveFileName(
             self, "Save Report", default_name, "Text Files (*.txt)"
         )
@@ -1151,7 +1225,7 @@ class QtMeritCalcApp(QMainWindow):
         )
         act_exit.triggered.connect(lambda: QApplication.instance().quit())
         self.tray.setContextMenu(menu)
-        self.tray.setToolTip("SC MERIT CALC")
+        self.tray.setToolTip("SCMC")
         self.tray.activated.connect(self._tray_activated)
         self.tray.show()
 
@@ -1612,7 +1686,7 @@ class QtMeritCalcApp(QMainWindow):
             # shortcuts setting observer will trigger _register_shortcuts and table update
 
     def _reset_keybind(self, key_id: str):
-        from meritscalc.settings import DEFAULT_SETTINGS
+        from .settings import DEFAULT_SETTINGS
 
         sc = self.settings.get("shortcuts", {}) or {}
         default_sc = DEFAULT_SETTINGS.get("shortcuts", {})
@@ -1633,17 +1707,17 @@ class QtMeritCalcApp(QMainWindow):
         about_lay.setContentsMargins(12, 16, 12, 12)
         about_lay.setSpacing(12)
 
-        header = self._label("SC MERIT CALC", 12)
+        header = self._label("SCMC", 12)
         about_lay.addWidget(header)
 
         body = QLabel(
-            "Merits calculator for Star Citizen. Calculates merits, fees and aUEC."
+            "SCMC (Star Citizen Merit Calculator). Calculates merits, fees and aUEC."
         )
         body.setAlignment(Qt.AlignmentFlag.AlignCenter)
         body.setWordWrap(True)
         about_lay.addWidget(body)
 
-        dev_body = QLabel("Developer: PINKgeekPDX • Development date: 2025-12-03")
+        dev_body = QLabel("Developer: PINKgeekPDX")
         dev_body.setAlignment(Qt.AlignmentFlag.AlignCenter)
         dev_body.setWordWrap(True)
         dev_body.setStyleSheet("color: #a0d0ff;")
@@ -1812,31 +1886,6 @@ class QtMeritCalcApp(QMainWindow):
         actions_lay.addWidget(actions_text)
         scroll_layout.addWidget(actions_box)
 
-        # Keyboard Shortcuts Section
-        shortcuts_box = SciFiPanel("KEYBOARD SHORTCUTS")
-        shortcuts_lay = QVBoxLayout(shortcuts_box)
-        shortcuts_lay.setContentsMargins(12, 16, 12, 12)
-        shortcuts_lay.setSpacing(8)
-
-        shortcuts_text = QLabel(
-            "<b>Copy Report:</b> Ctrl+C<br>"
-            "<b>Save Report:</b> Ctrl+S<br>"
-            "<b>Clear Inputs:</b> Ctrl+R<br>"
-            "<b>Minimize:</b> Esc<br>"
-            "<b>Toggle Transparency:</b> Ctrl+Shift+T<br>"
-            "<b>Toggle Always On Top:</b> Ctrl+Shift+A<br>"
-            "<b>Toggle Visibility:</b> Ctrl+M<br>"
-            "<b>Open Settings:</b> Ctrl+O<br>"
-            "<b>Exit:</b> Shift+Esc<br><br>"
-            "All shortcuts can be customized in the Settings tab."
-        )
-        shortcuts_text.setWordWrap(True)
-        shortcuts_text.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-        shortcuts_lay.addWidget(shortcuts_text)
-        scroll_layout.addWidget(shortcuts_box)
-
         # Settings Section
         # Settings Section
         settings_box = SciFiPanel("SETTINGS")
@@ -1845,15 +1894,6 @@ class QtMeritCalcApp(QMainWindow):
         settings_lay.setSpacing(8)
 
         settings_text = QLabel(
-            "<b>Display:</b><br>"
-            "• <b>DPI Scale:</b> Manually adjust the UI scaling percentage "
-            "(50-200%). Disabled when Auto Scaling is enabled.<br>"
-            "• <b>Auto Scaling:</b> Automatically scales the UI based on your "
-            "screen's DPI. When enabled, manual scale controls are disabled.<br>"
-            "• <b>Base Font Size:</b> Sets the base font size for the application "
-            "(8-48pt). Disabled when Auto Scaling is enabled.<br>"
-            "• <b>Auto Scale Bias:</b> Adjusts how aggressive the auto-scaling "
-            "is (0.5-1.5). Lower values make the UI more compact.<br><br>"
             "<b>Behavior:</b><br>"
             "• <b>Always On Top:</b> Keeps the window above all other windows."
             "<br>"
@@ -1905,19 +1945,17 @@ class QtMeritCalcApp(QMainWindow):
         updates_lay.setSpacing(8)
 
         updates_text = QLabel(
-            "The application can automatically check for updates from GitHub "
-            "releases.<br><br>"
+            "The application can automatically check for updates.<br><br>"
             "<b>Checking for Updates:</b><br>"
-            "Click 'Check for Updates' in the About tab. The app will connect "
-            "to GitHub and compare your current version with the latest release."
+            "Click 'Check for Updates' in the About tab."
             "<br><br>"
             "<b>Download Options:</b><br>"
             "• <b>Download:</b> Downloads the installer for later installation. "
             "You'll be prompted to install it the next time you start the app.<br>"
             "• <b>Download and Update:</b> Downloads and immediately launches "
             "the installer, then closes the current app session.<br><br>"
-            "Updates are checked against the latest release on the GitHub "
-            "repository. The installer is automatically downloaded and can be "
+            "Updates are checked against the latest release. "
+            "The installer is automatically downloaded and can be "
             "run to update the application."
         )
         updates_text.setWordWrap(True)
@@ -1936,16 +1974,10 @@ class QtMeritCalcApp(QMainWindow):
         tips_text = QLabel(
             "• Double-click any output value (Merits with Fee or aUEC Value) "
             "to quickly copy it.<br>"
-            "• Use keyboard shortcuts for faster workflow - customize them "
-            "in Settings.<br>"
             "• Adjust transparency to make the window less intrusive while "
             "gaming.<br>"
             "• Enable 'Always On Top' to keep the calculator visible while "
             "using other applications.<br>"
-            "• The calculator automatically saves your window position and "
-            "settings.<br>"
-            "• All settings are saved automatically when changed - no need "
-            "to click Save."
         )
         tips_text.setWordWrap(True)
         tips_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
@@ -2035,34 +2067,7 @@ class QtMeritCalcApp(QMainWindow):
         actions_lay.addWidget(actions_text)
         scroll_layout.addWidget(actions_box)
 
-        # Keyboard Shortcuts Section
-        shortcuts_box = SciFiPanel("KEYBOARD SHORTCUTS")
-        shortcuts_box.setSizePolicy(
-            QSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
-            )
-        )
-        shortcuts_lay = QVBoxLayout(shortcuts_box)
-        shortcuts_lay.setContentsMargins(12, 16, 12, 12)
-        shortcuts_lay.setSpacing(8)
-
-        shortcuts_text = QLabel(
-            "<b>Ctrl+C:</b> Copy Report &nbsp;&bull;&nbsp; "
-            "<b>Ctrl+S:</b> Save Report<br>"
-            "<b>Ctrl+R:</b> Clear Inputs &nbsp;&bull;&nbsp; "
-            "<b>Esc:</b> Minimize<br>"
-            "<b>Ctrl+Shift+T:</b> Toggle Transparency<br>"
-            "<b>Ctrl+Shift+A:</b> Toggle Always On Top<br>"
-            "<b>Ctrl+O:</b> Open Settings"
-        )
-        shortcuts_text.setWordWrap(True)
-        shortcuts_text.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-        shortcuts_lay.addWidget(shortcuts_text)
-        scroll_layout.addWidget(shortcuts_box)
-
-        # Spread available space across the three panels to avoid large empty areas
+        # Spread available space across panels to avoid large empty areas
         for idx in range(scroll_layout.count()):
             scroll_layout.setStretch(idx, 1)
 

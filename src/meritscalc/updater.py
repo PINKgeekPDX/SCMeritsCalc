@@ -1,4 +1,4 @@
-"""Update manager for MeritsCalc."""
+"""Update manager for SCMC."""
 
 import logging
 import os
@@ -11,7 +11,7 @@ from typing import Optional, Tuple, Callable
 import requests  # type: ignore[import-untyped]
 from packaging import version
 
-from meritscalc.version import __version__
+from .version import __version__
 
 GITHUB_REPO = "PINKgeekPDX/SCMeritsCalc"
 RELEASE_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -134,9 +134,9 @@ class UpdateManager:
         assets = self.latest_release_info.get("assets", [])
         for asset in assets:
             name = asset.get("name", "").lower()
-            if name.endswith(".exe") and "setup" in name:
+            if name.endswith(".exe") and "installer" in name:
                 return asset.get("browser_download_url")
-            if name.endswith(".exe"):  # Fallback to any exe if setup not found
+            if name.endswith(".exe"):  # Fallback to any exe if installer not found
                 return asset.get("browser_download_url")
 
         raise ValueError("No suitable installer found in the release assets.")
@@ -151,7 +151,7 @@ class UpdateManager:
         for asset in assets:
             name = asset.get("name", "")
             lname = name.lower()
-            if lname.endswith(".exe") and "setup" in lname:
+            if lname.endswith(".exe") and "installer" in lname:
                 return (
                     asset.get("browser_download_url"),
                     asset.get("size"),
@@ -195,12 +195,12 @@ class UpdateManager:
                 # Try to use a consistent name but safe
                 fname = url.split("/")[-1]
                 if not fname.endswith(".exe"):
-                    fname = "MeritsCalc_Update.exe"
+                    fname = "SCMC_Installer.exe"
                 temp_path = str(download_dir / fname)
             else:
                 # Create a temp file
                 fd, temp_path = tempfile.mkstemp(
-                    suffix=".exe", prefix="MeritsCalc_Setup_"
+                    suffix=".exe", prefix="SCMC_Installer_"
                 )
                 os.close(fd)
 

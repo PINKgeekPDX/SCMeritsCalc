@@ -388,7 +388,7 @@ class UpdateFoundDialog(QDialog):
         try:
             _, size_bytes, _ = self.manager.get_installer_meta()
         except Exception:
-            _, size_bytes = (None, None)
+            _, size_bytes, _ = (None, None, None)
 
         size_str = "Unknown"
         if isinstance(size_bytes, int) and size_bytes > 0:

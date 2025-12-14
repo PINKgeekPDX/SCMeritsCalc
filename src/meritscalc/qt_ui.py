@@ -54,6 +54,7 @@ from PyQt6.QtWidgets import (
 
 from .updater import UpdateManager
 from .settings import _app_data_dir
+from .version import __version__
 from .theme import (
     get_main_stylesheet,
     get_dialog_stylesheet,
@@ -104,6 +105,21 @@ def get_app_icon() -> QIcon:
     p.drawEllipse(4, 4, 56, 56)
     p.end()
     return QIcon(pm)
+
+
+class ClickableLabel(QLabel):
+    """A QLabel that can be clicked to open a URL."""
+
+    def __init__(self, text: str, url: str, parent: Optional[QWidget] = None):
+        super().__init__(text, parent)
+        self.url = url
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, e) -> None:
+        """Handle mouse press events to open the URL."""
+        if e.button() == Qt.MouseButton.LeftButton:
+            QDesktopServices.openUrl(QUrl(self.url))
+        super().mousePressEvent(e)
 
 
 class ClickableSciFiPanel(SciFiPanel):
@@ -1696,64 +1712,98 @@ class QtMeritCalcApp(QMainWindow):
 
     def _build_about_tab(self, tab: QWidget):
         v = QVBoxLayout(tab)
-        v.setContentsMargins(16, 16, 16, 16)
-        v.setSpacing(16)
+        v.setContentsMargins(20, 20, 20, 20)
+        v.setSpacing(0)
 
         about_box = SciFiPanel("ABOUT")
         about_box.setSizePolicy(
             QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         )
         about_lay = QVBoxLayout(about_box)
-        about_lay.setContentsMargins(12, 16, 12, 12)
-        about_lay.setSpacing(12)
+        about_lay.setContentsMargins(20, 20, 20, 20)
+        about_lay.setSpacing(16)
 
-        header = self._label("SCMC", 12)
+        # Header section - tighter spacing
+        header = self._label("SCMC", 14)
         about_lay.addWidget(header)
+        about_lay.addSpacing(4)
 
-        body = QLabel(
-            "SCMC (Star Citizen Merit Calculator). Calculates merits, fees and aUEC."
-        )
+        # Description - compact
+        body = QLabel("Star Citizen Merit Calculator\nCalculates merits, fees and aUEC")
         body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        body.setWordWrap(True)
+        body.setWordWrap(False)
+        body_font = QFont()
+        body_font.setPointSize(9)
+        body.setFont(body_font)
+        body.setStyleSheet("color: #b0b0b0;")
         about_lay.addWidget(body)
+        about_lay.addSpacing(8)
 
-        dev_body = QLabel("Developer: PINKgeekPDX")
-        dev_body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dev_body.setWordWrap(True)
-        dev_body.setStyleSheet("color: #a0d0ff;")
-        about_lay.addWidget(dev_body)
+        # Developer and Version in a compact horizontal layout
+        info_row = QHBoxLayout()
+        info_row.setSpacing(12)
+        info_row.addStretch()
 
+        dev_label = QLabel("Developer: PINKgeekPDX")
+        dev_font = QFont()
+        dev_font.setPointSize(8)
+        dev_label.setFont(dev_font)
+        dev_label.setStyleSheet("color: #a0d0ff;")
+        info_row.addWidget(dev_label)
+
+        # Compact inline version badge
+        releases_url = "https://github.com/PINKgeekPDX/SCMeritsCalc/releases"
+        version_label = ClickableLabel(f"v{__version__}", releases_url, tab)
+        version_font = QFont()
+        version_font.setPointSize(8)
+        version_font.setBold(True)
+        version_label.setFont(version_font)
+        version_label.setStyleSheet(
+            "color: #00d9ff; "
+            "background: rgba(0, 217, 255, 0.08); "
+            "border: 1px solid rgba(0, 217, 255, 0.25); "
+            "border-radius: 3px; "
+            "padding: 2px 8px; "
+            "cursor: pointer;"
+        )
+        info_row.addWidget(version_label)
+        info_row.addStretch()
+
+        about_lay.addLayout(info_row)
+        about_lay.addSpacing(16)
+
+        # Icon - slightly smaller
         img = QLabel()
-        img.setFixedSize(150, 150)
+        img.setFixedSize(120, 120)
         icon = get_app_icon()
-        pm = icon.pixmap(150, 150)
+        pm = icon.pixmap(120, 120)
         img.setPixmap(pm)
         img.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_lay.addWidget(img, 0, Qt.AlignmentFlag.AlignCenter)
+        about_lay.addSpacing(20)
 
-        # Button row/column layout with non-bold text
+        # Buttons - more compact and refined
         btn_repo = QuantumButton("GitHub", tab)
         btn_issues = QuantumButton("Issues", tab)
         btn_updates = QuantumButton("Check for Updates", tab)
         btn_updates.setEnabled(False)
-        btn_license = QuantumButton("Open Source License", tab)
+        btn_license = QuantumButton("License", tab)
 
-        # De-emphasize bold for these buttons
+        # Consistent button styling
         for btn in (btn_repo, btn_issues, btn_updates, btn_license):
             f = btn.font()
+            f.setPointSize(9)
             f.setBold(False)
             btn.setFont(f)
+            btn.setMinimumHeight(32)
 
-        # Space below the image before buttons
-        about_lay.addSpacing(6)
-
-        # Group button rows and center them
+        # Compact button layout
         buttons_col = QVBoxLayout()
-        buttons_col.setSpacing(8)
+        buttons_col.setSpacing(6)
 
         # First row: GitHub, Issues
         row_top = QHBoxLayout()
-        row_top.setSpacing(10)
+        row_top.setSpacing(8)
         row_top.addStretch()
         row_top.addWidget(btn_repo)
         row_top.addWidget(btn_issues)
@@ -1762,7 +1812,7 @@ class QtMeritCalcApp(QMainWindow):
 
         # Second row: Check for updates
         row_mid = QHBoxLayout()
-        row_mid.setSpacing(10)
+        row_mid.setSpacing(8)
         row_mid.addStretch()
         row_mid.addWidget(btn_updates)
         row_mid.addStretch()
@@ -1770,7 +1820,7 @@ class QtMeritCalcApp(QMainWindow):
 
         # Third row: License
         row_bottom = QHBoxLayout()
-        row_bottom.setSpacing(10)
+        row_bottom.setSpacing(8)
         row_bottom.addStretch()
         row_bottom.addWidget(btn_license)
         row_bottom.addStretch()

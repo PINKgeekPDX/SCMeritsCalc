@@ -8,9 +8,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from .logic import MeritsCalculator
-from .qt_ui import create_qt_app
-from .settings import LOG_FILE, SettingsManager
+from meritscalc.logic import MeritsCalculator
+from meritscalc.qt_ui import create_qt_app
+from meritscalc.settings import LOG_FILE, SettingsManager
 
 
 def create_enhanced_icon():

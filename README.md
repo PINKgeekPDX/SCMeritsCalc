@@ -2,6 +2,8 @@
 
 # // **S.C.M.C** // Star Citizen Merits Calculator //
 
+# [http://www.scmc.space](http://www.scmc.space)
+
 ![License](https://img.shields.io/github/license/PINKgeekPDX/SCMeritsCalc?style=for-the-badge)
 ![Release](https://img.shields.io/github/v/release/PINKgeekPDX/SCMeritsCalc?style=for-the-badge)
 ![Downloads](https://img.shields.io/github/downloads/PINKgeekPDX/SCMeritsCalc/total?style=for-the-badge)
@@ -57,20 +59,33 @@
 
 > **OPTION ( 3 )**
 
-- **Build App .EXE From Source -** build-exe.ps1:
+- **Build App .EXE From Source -** build_exe.ps1:
   - If you prefer to build the standalone .exe from source.
+  - ( Optional ) Authenticode signing (recommended for SmartScreen):
+    - Requires a Windows code-signing certificate + Windows SDK (signtool.exe).
+    - Configure one of:
+      - **SCMC_SIGN_THUMBPRINT** = cert thumbprint from Windows Cert Store
+      - **SCMC_SIGN_PFX_PATH** = path to a `.pfx` code-signing cert
+    - Optional:
+      - **SCMC_SIGN_PFX_PASSWORD** = password for the `.pfx`
+      - **SCMC_SIGN_TIMESTAMP_URL** = timestamp server (default: `http://timestamp.digicert.com`)
+    - Use **-Sign** to _require_ signing (script will fail if no cert is configured).
 
 ```powershell
 ./scripts/build_exe.ps1
+./scripts/build_exe.ps1 -Sign
 ```
 
 > **OPTION ( 4 )**
 
 - **Build Installer ( may require Inno setup ) -** build_installer.ps1:
   - If you prefer to build the installer .exe from source.
+  - ( Optional ) Authenticode signing uses the same `SCMC_SIGN_*` variables as above.
+  - Note: build_installer expects `dist\\SCMC.exe` to exist first (build_exe.ps1 produces and can sign it).
 
 ```powershell
 ./scripts/build_installer.ps1
+./scripts/build_installer.ps1 -Sign
 ```
 
 > **OPTION ( 5 )**

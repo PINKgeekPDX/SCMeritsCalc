@@ -1770,6 +1770,16 @@ class QtMeritCalcApp(QMainWindow):
         info_row.addStretch()
 
         about_lay.addLayout(info_row)
+        # Official website link
+        website_url = "http://www.scmc.space"
+        website_label = ClickableLabel(website_url, website_url, tab)
+        website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        website_label.setStyleSheet(
+            "color: #00d9ff; "
+            "text-decoration: underline; "
+            "padding: 2px 6px;"
+        )
+        about_lay.addWidget(website_label)
         about_lay.addSpacing(16)
 
         # Icon - slightly smaller
@@ -1783,6 +1793,7 @@ class QtMeritCalcApp(QMainWindow):
         about_lay.addSpacing(20)
 
         # Buttons - more compact and refined
+        btn_website = QuantumButton("Website", tab)
         btn_repo = QuantumButton("GitHub", tab)
         btn_issues = QuantumButton("Issues", tab)
         btn_updates = QuantumButton("Check for Updates", tab)
@@ -1790,7 +1801,7 @@ class QtMeritCalcApp(QMainWindow):
         btn_license = QuantumButton("License", tab)
 
         # Consistent button styling
-        for btn in (btn_repo, btn_issues, btn_updates, btn_license):
+        for btn in (btn_website, btn_repo, btn_issues, btn_updates, btn_license):
             f = btn.font()
             f.setPointSize(9)
             f.setBold(False)
@@ -1801,10 +1812,11 @@ class QtMeritCalcApp(QMainWindow):
         buttons_col = QVBoxLayout()
         buttons_col.setSpacing(6)
 
-        # First row: GitHub, Issues
+        # First row: Website, GitHub, Issues
         row_top = QHBoxLayout()
         row_top.setSpacing(8)
         row_top.addStretch()
+        row_top.addWidget(btn_website)
         row_top.addWidget(btn_repo)
         row_top.addWidget(btn_issues)
         row_top.addStretch()
@@ -1830,8 +1842,12 @@ class QtMeritCalcApp(QMainWindow):
 
         v.addWidget(about_box, 1)
 
+        website_url = "http://www.scmc.space"
         repo_url = "https://github.com/PINKgeekPDX/SCMeritsCalc"
         issues_url = "https://github.com/PINKgeekPDX/SCMeritsCalc/issues"
+        btn_website.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl(website_url))
+        )
         btn_repo.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(repo_url)))
         btn_issues.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(issues_url)))
 

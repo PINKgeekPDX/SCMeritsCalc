@@ -21,8 +21,13 @@ venv/
 # Build artifacts
 build/
 dist/
-installer/
 *.spec
+
+# Inno Setup / installer outputs (keep installer scripts tracked)
+installer/output/
+installer/*.exe
+installer/*.msi
+installer/*.zip
 
 # Logs
 *.log
